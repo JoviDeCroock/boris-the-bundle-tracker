@@ -132,11 +132,11 @@ export function EvolutionsTable({ evolutions, repository, repoId, packageId }: E
                             type="button"
                             variant="secondary"
                             size="sm"
-                            class="h-6 px-2.5 py-0 text-[10px] font-mono border border-emerald-500/25 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
+                            class="px-2.5 py-0 text-[10px] font-mono border border-emerald-500/25 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
                             onClick={() => handleMarkMerged(prNumber)}
                             disabled={updatingPr.value === prNumber}
                           >
-                            {updatingPr.value === prNumber ? "Marking…" : "Mark PR as merged"}
+                            {updatingPr.value === prNumber ? "Marking…" : "Merged"}
                           </Button>
                         )}
                       </div>
