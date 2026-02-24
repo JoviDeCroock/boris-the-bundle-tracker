@@ -249,7 +249,6 @@ report.post("/", async (c) => {
   return c.json({ success: true, recordsCreated: upsertedCount });
 });
 
-
 /**
  * PATCH /api/report
  *

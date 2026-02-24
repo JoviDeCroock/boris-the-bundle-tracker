@@ -76,6 +76,52 @@ packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
   return c.json({ package: pkg, evolutions });
 });
 
+// PATCH /:repoId/packages/:packageId/evolutions/:prNumber — mark PR as merged/closed
+packages.patch("/:repoId/packages/:packageId/evolutions/:prNumber", async (c) => {
+  const db = drizzle(c.env.DB, { schema });
+  const userId = c.get("user")!.id;
+  const { repoId, packageId, prNumber: prNumberStr } = c.req.param();
+  const prNumber = Number(prNumberStr);
+
+  if (!(await assertRepoAccess(db, userId, repoId))) {
+    return c.json({ error: "Repository not found" }, 404);
+  }
+
+  const pkg = await db
+    .select()
+    .from(schema.package_)
+    .where(and(eq(schema.package_.id, packageId), eq(schema.package_.repositoryId, repoId)))
+    .get();
+
+  if (!pkg) {
+    return c.json({ error: "Package not found" }, 404);
+  }
+
+  let body: { prMerged?: boolean; prState?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { prMerged, prState } = body;
+
+  await db
+    .update(schema.packageEvolution)
+    .set({
+      prMerged: prMerged !== undefined ? Boolean(prMerged) : undefined,
+      prState: prState === "closed" || prState === "open" ? prState : undefined,
+    })
+    .where(
+      and(
+        eq(schema.packageEvolution.packageId, packageId),
+        eq(schema.packageEvolution.prNumber, prNumber),
+      ),
+    );
+
+  return c.json({ success: true });
+});
+
 // DELETE /:repoId/packages/:packageId — delete a package and all its evolutions
 packages.delete("/:repoId/packages/:packageId", async (c) => {
   const db = drizzle(c.env.DB, { schema });

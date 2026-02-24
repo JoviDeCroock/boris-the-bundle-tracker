@@ -1,11 +1,12 @@
 import { useEffect, useState } from "preact/hooks";
 import { useLocation, useRoute } from "preact-iso";
-import { useModel } from "@preact/signals";
+import { useModel, useSignal } from "@preact/signals";
 import { AuthModel } from "../../models/auth";
 import { RepositoriesModel } from "../../models/repositories";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import type { Repository, PackageEvolution } from "../../lib/api";
+import { updateEvolution } from "../../lib/api";
 import { BundleSizeChart } from "../../components/BundleSizeChart";
 import actionDefinitionFile from "../../../action/action.yml?raw";
 import actionRuntimeFile from "../../../action/index.js?raw";
@@ -342,9 +343,13 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
 function EvolutionsTable({
   evolutions,
   repository,
+  repoId,
+  packageId,
 }: {
   evolutions: PackageEvolution[];
   repository: Repository | undefined;
+  repoId: string;
+  packageId: string;
 }) {
   // Group by PR and keep only the latest measurement for each file in that PR.
   const byPr = new Map<number, Map<string, PackageEvolution>>();
@@ -356,6 +361,21 @@ function EvolutionsTable({
       files.set(key, ev);
     }
     byPr.set(ev.prNumber, files);
+  }
+
+  const updatingPr = useSignal<number | null>(null);
+
+  async function handleMarkMerged(prNumber: number) {
+    updatingPr.value = prNumber;
+    try {
+      await updateEvolution(repoId, packageId, prNumber, { prMerged: true });
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to mark as merged");
+    } finally {
+      updatingPr.value = null;
+    }
   }
 
   if (byPr.size === 0) {
@@ -423,19 +443,31 @@ function EvolutionsTable({
                       )}
                     </td>
                     <td class="py-2.5 pr-4 align-top" rowSpan={entries.length}>
-                      {latestEntry.prMerged ? (
-                        <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500">
-                          merged
-                        </span>
-                      ) : latestEntry.prState === "closed" ? (
-                        <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500">
-                          closed
-                        </span>
-                      ) : (
-                        <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500">
-                          open
-                        </span>
-                      )}
+                      <div class="flex items-center gap-2">
+                        {latestEntry.prMerged ? (
+                          <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500">
+                            merged
+                          </span>
+                        ) : latestEntry.prState === "closed" ? (
+                          <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500">
+                            closed
+                          </span>
+                        ) : (
+                          <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500">
+                            open
+                          </span>
+                        )}
+                        {!latestEntry.prMerged && latestEntry.prState !== "closed" && (
+                          <button
+                            type="button"
+                            class="text-[10px] text-neutral-600 hover:text-emerald-500 transition-colors"
+                            onClick={() => handleMarkMerged(prNumber)}
+                            disabled={updatingPr.value === prNumber}
+                          >
+                            {updatingPr.value === prNumber ? "..." : "mark merged"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </>
                 )}
@@ -577,6 +609,8 @@ function PackagesPanel({
                         <EvolutionsTable
                           evolutions={repos.evolutions.value}
                           repository={repository}
+                          repoId={repoId}
+                          packageId={pkg.id}
                         />
                       </div>
                     </>

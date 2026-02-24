@@ -133,3 +133,15 @@ export async function getPackageEvolutions(
 export async function deletePackage(repoId: string, packageId: string): Promise<void> {
   await fetchApi(`/api/v1/repositories/${repoId}/packages/${packageId}`, { method: "DELETE" });
 }
+
+export async function updateEvolution(
+  repoId: string,
+  packageId: string,
+  prNumber: number,
+  data: { prMerged?: boolean; prState?: string },
+): Promise<void> {
+  await fetchApi(`/api/v1/repositories/${repoId}/packages/${packageId}/evolutions/${prNumber}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
