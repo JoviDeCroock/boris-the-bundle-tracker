@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 import { useLocation, useRoute } from "preact-iso";
 import { useModel, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,10 +95,10 @@ const ACTION_INSTALL_FILES = [
 ] as const;
 
 function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [activeFileId, setActiveFileId] = useState<(typeof ACTION_INSTALL_FILES)[number]["id"]>(
+  const activeFileId = useSignal<(typeof ACTION_INSTALL_FILES)[number]["id"]>(
     ACTION_INSTALL_FILES[0].id,
   );
-  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+  const copiedLabel = useSignal<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -114,17 +114,17 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
   if (!open) return null;
 
   const activeFile =
-    ACTION_INSTALL_FILES.find((file) => file.id === activeFileId) ?? ACTION_INSTALL_FILES[0];
+    ACTION_INSTALL_FILES.find((file) => file.id === activeFileId.value) ?? ACTION_INSTALL_FILES[0];
 
   async function copyText(text: string, label: string) {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedLabel(label);
+      copiedLabel.value = label;
       window.setTimeout(() => {
-        setCopiedLabel((current) => (current === label ? null : current));
+        if (copiedLabel.value === label) copiedLabel.value = null;
       }, 1500);
     } catch {
-      setCopiedLabel(`Failed to copy ${label}`);
+      copiedLabel.value = `Failed to copy ${label}`;
     }
   }
 
@@ -174,7 +174,7 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
               <button
                 key={file.id}
                 type="button"
-                onClick={() => setActiveFileId(file.id)}
+                onClick={() => (activeFileId.value = file.id)}
                 class={`px-3 py-1.5 rounded-md font-mono text-xs border transition-colors ${
                   activeFile.id === file.id
                     ? "border-orange-500/40 bg-orange-500/10 text-orange-400"
@@ -195,8 +195,8 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
                 {activeFile.targetPath}
               </code>
               <div class="flex items-center gap-2">
-                {copiedLabel && (
-                  <span class="font-mono text-[10px] text-emerald-500">{copiedLabel}</span>
+                {copiedLabel.value && (
+                  <span class="font-mono text-[10px] text-emerald-500">{copiedLabel.value}</span>
                 )}
                 <Button
                   size="sm"
@@ -387,7 +387,7 @@ function EvolutionsTable({
   }
 
   const queryClient = useQueryClient();
-  const [updatingPr, setUpdatingPr] = useState<number | null>(null);
+  const updatingPr = useSignal<number | null>(null);
   const markMergedMutation = useMutation({
     mutationFn: (prNumber: number) => updateEvolution(repoId, packageId, prNumber, { prMerged: true }),
     onSuccess: () => {
@@ -398,14 +398,14 @@ function EvolutionsTable({
   });
 
   async function handleMarkMerged(prNumber: number) {
-    setUpdatingPr(prNumber);
+    updatingPr.value = prNumber;
     try {
       await markMergedMutation.mutateAsync(prNumber);
     } catch (e) {
       console.error(e);
       alert("Failed to mark as merged");
     } finally {
-      setUpdatingPr(null);
+      updatingPr.value = null;
     }
   }
 
@@ -493,9 +493,9 @@ function EvolutionsTable({
                             type="button"
                             class="text-[10px] text-neutral-600 hover:text-emerald-500 transition-colors"
                             onClick={() => handleMarkMerged(prNumber)}
-                            disabled={updatingPr === prNumber}
+                            disabled={updatingPr.value === prNumber}
                           >
-                            {updatingPr === prNumber ? "..." : "mark merged"}
+                            {updatingPr.value === prNumber ? "..." : "mark merged"}
                           </button>
                         )}
                       </div>
@@ -529,7 +529,7 @@ function PackagesPanel({
   repository: Repository | undefined;
 }) {
   const queryClient = useQueryClient();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const expandedId = useSignal<string | null>(null);
 
   const packagesQuery = useQuery({
     queryKey: ["repositories", repoId, "packages"],
@@ -538,9 +538,9 @@ function PackagesPanel({
   });
 
   const evolutionsQuery = useQuery({
-    queryKey: ["repositories", repoId, "packages", expandedId, "evolutions"],
-    queryFn: () => getPackageEvolutions(repoId, expandedId as string),
-    enabled: Boolean(repoId && expandedId),
+    queryKey: ["repositories", repoId, "packages", expandedId.value, "evolutions"],
+    queryFn: () => getPackageEvolutions(repoId, expandedId.value as string),
+    enabled: Boolean(repoId && expandedId.value),
   });
 
   const removePackageMutation = useMutation({
@@ -551,11 +551,11 @@ function PackagesPanel({
   });
 
   function handleExpand(packageId: string) {
-    if (expandedId === packageId) {
-      setExpandedId(null);
+    if (expandedId.value === packageId) {
+      expandedId.value = null;
       return;
     }
-    setExpandedId(packageId);
+    expandedId.value = packageId;
   }
 
   return (
@@ -592,14 +592,14 @@ function PackagesPanel({
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
                   <Button variant="secondary" size="sm" onClick={() => handleExpand(pkg.id)}>
-                    {expandedId === pkg.id ? "Hide" : "History"}
+                    {expandedId.value === pkg.id ? "Hide" : "History"}
                   </Button>
                   <Button
                     variant="danger-icon"
                     onClick={async () => {
                       if (confirm(`Delete package "${pkg.name}" and all its data?`)) {
                         await removePackageMutation.mutateAsync(pkg.id);
-                        if (expandedId === pkg.id) setExpandedId(null);
+                        if (expandedId.value === pkg.id) expandedId.value = null;
                       }
                     }}
                     title="Delete package"
@@ -621,7 +621,7 @@ function PackagesPanel({
                 </div>
               </div>
 
-              {expandedId === pkg.id && (
+              {expandedId.value === pkg.id && (
                 <div class="pb-4 space-y-3">
                   {evolutionsQuery.isLoading ? (
                     <div
@@ -680,7 +680,7 @@ export function RepositoryPage() {
   const { route } = useLocation();
   const { params } = useRoute();
   const auth = useModel(AuthModel);
-  const [actionFilesModalOpen, setActionFilesModalOpen] = useState(false);
+  const actionFilesModalOpen = useSignal(false);
 
   const repoId = params.id as string;
 
@@ -713,8 +713,8 @@ export function RepositoryPage() {
   return (
     <div class="min-h-screen bg-neutral-950 pt-14">
       <ActionFilesModal
-        open={actionFilesModalOpen}
-        onClose={() => setActionFilesModalOpen(false)}
+        open={actionFilesModalOpen.value}
+        onClose={() => (actionFilesModalOpen.value = false)}
       />
       <div class="max-w-3xl mx-auto px-6 py-10 space-y-5">
         {/* Breadcrumb */}
@@ -752,7 +752,11 @@ export function RepositoryPage() {
                 .
               </p>
             </div>
-            <Button size="sm" variant="secondary" onClick={() => setActionFilesModalOpen(true)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => (actionFilesModalOpen.value = true)}
+            >
               Copy action files
             </Button>
           </div>

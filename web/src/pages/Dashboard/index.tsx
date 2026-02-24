@@ -1,11 +1,11 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect } from "preact/hooks";
 import { useLocation } from "preact-iso";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthModel } from "../../models/auth";
 import { addRepository, listRepositories, removeRepository } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { useModel } from "@preact/signals";
+import { useModel, useSignal } from "@preact/signals";
 
 /** Format "owner/name" from two separate fields. */
 function parseRepoInput(raw: string): { owner: string; name: string } | null {
@@ -39,9 +39,9 @@ export function Dashboard() {
     },
   });
 
-  const [addInput, setAddInput] = useState("");
-  const [addError, setAddError] = useState<string | null>(null);
-  const [addLoading, setAddLoading] = useState(false);
+  const addInput = useSignal("");
+  const addError = useSignal<string | null>(null);
+  const addLoading = useSignal(false);
 
   useEffect(() => {
     auth.checkSession().then(() => {
@@ -61,20 +61,20 @@ export function Dashboard() {
 
   async function handleAddRepo(e: Event) {
     e.preventDefault();
-    setAddError(null);
-    const parsed = parseRepoInput(addInput);
+    addError.value = null;
+    const parsed = parseRepoInput(addInput.value);
     if (!parsed) {
-      setAddError('Enter a repository as "owner/name", e.g. "acme/my-app"');
+      addError.value = 'Enter a repository as "owner/name", e.g. "acme/my-app"';
       return;
     }
-    setAddLoading(true);
+    addLoading.value = true;
     try {
       await addRepoMutation.mutateAsync(parsed);
-      setAddInput("");
+      addInput.value = "";
     } catch (err) {
-      setAddError(err instanceof Error ? err.message : "Failed to add repository");
+      addError.value = err instanceof Error ? err.message : "Failed to add repository";
     } finally {
-      setAddLoading(false);
+      addLoading.value = false;
     }
   }
 
@@ -99,15 +99,15 @@ export function Dashboard() {
             <Input
               type="text"
               placeholder="owner/repo"
-              value={addInput}
-              onInput={(e) => setAddInput((e.target as HTMLInputElement).value)}
+              value={addInput.value}
+              onInput={(e) => (addInput.value = (e.target as HTMLInputElement).value)}
               class="flex-1"
             />
-            <Button type="submit" size="sm" disabled={!addInput.trim() || addLoading}>
-              {addLoading ? "Adding…" : "Add"}
+            <Button type="submit" size="sm" disabled={!addInput.value.trim() || addLoading.value}>
+              {addLoading.value ? "Adding…" : "Add"}
             </Button>
           </form>
-          {addError && <p class="font-mono text-xs text-red-400 mt-2">{addError}</p>}
+          {addError.value && <p class="font-mono text-xs text-red-400 mt-2">{addError.value}</p>}
         </div>
 
         {/* Repository list */}
