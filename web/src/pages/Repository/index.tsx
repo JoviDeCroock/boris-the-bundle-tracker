@@ -401,12 +401,14 @@ function EvolutionsTable({
   repoId: string;
   packageId: string;
 }) {
-  console.log('EvolutionsTable render', { evolutions });
+  const safeEvolutions = evolutions.filter(
+    (ev): ev is PackageEvolution => Boolean(ev && ev.id),
+  );
 
   const byPr = useMemo(() => {
     // Group by PR and keep only the latest measurement for each file in that PR.
     const byPr = new Map<number, Map<string, PackageEvolution>>();
-    for (const ev of evolutions) {
+    for (const ev of safeEvolutions) {
       const key = `${ev.exportPath}::${ev.fileName}`;
       const files = byPr.get(ev.prNumber) ?? new Map<string, PackageEvolution>();
       const existing = files.get(key);
@@ -416,7 +418,7 @@ function EvolutionsTable({
       byPr.set(ev.prNumber, files);
     }
     return byPr;
-  }, [evolutions]);
+  }, [safeEvolutions]);
 
 
   const queryClient = useQueryClient();
@@ -577,7 +579,6 @@ function PackagesPanel({
     queryFn: () => getPackageEvolutions(repoId, expandedId.value as string),
     enabled: Boolean(repoId && expandedId.value),
   });
-  console.log("PackagesPanel render", { packages: packagesQuery.data, evolutions: evolutionsQuery.data });
 
   const removePackageMutation = useMutation({
     mutationFn: (packageId: string) => deletePackage(repoId, packageId),
@@ -587,7 +588,6 @@ function PackagesPanel({
   });
 
   function handleExpand(packageId: string) {
-    console.log("handleExpand", { packageId, currentExpanded: expandedId.value });
     if (expandedId.value === packageId) {
       expandedId.value = null;
       return;
@@ -680,12 +680,18 @@ function PackagesPanel({
                     </div>
                   ) : (
                     <>
-                      {(evolutionsQuery.data?.evolutions ?? []).some((ev) => ev.prMerged) && (
+                      {(evolutionsQuery.data?.evolutions ?? [])
+                        .filter((ev): ev is PackageEvolution => Boolean(ev && ev.id))
+                        .some((ev) => ev.prMerged) && (
                         <div
                           class="rounded-lg border border-neutral-800/60 p-4"
                           style="background: rgba(0,0,0,0.2);"
                         >
-                          <BundleSizeChart evolutions={evolutionsQuery.data?.evolutions ?? []} />
+                          <BundleSizeChart
+                            evolutions={(evolutionsQuery.data?.evolutions ?? []).filter(
+                              (ev): ev is PackageEvolution => Boolean(ev && ev.id),
+                            )}
+                          />
                         </div>
                       )}
                       <div
@@ -693,7 +699,9 @@ function PackagesPanel({
                         style="background: rgba(0,0,0,0.2);"
                       >
                         <EvolutionsTable
-                          evolutions={evolutionsQuery.data?.evolutions ?? []}
+                          evolutions={(evolutionsQuery.data?.evolutions ?? []).filter(
+                            (ev): ev is PackageEvolution => Boolean(ev && ev.id),
+                          )}
                           repository={repository}
                           repoId={repoId}
                           packageId={pkg.id}
