@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useSignal } from "@preact/signals";
 import type { PackageEvolution } from "../lib/api";
 
 type CompressionMode = "raw" | "gzip" | "brotli";
@@ -49,8 +49,8 @@ function niceAxisMax(rawMax: number): number {
 }
 
 export function BundleSizeChart({ evolutions }: Props) {
-  const [mode, setMode] = useState<CompressionMode>("gzip");
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const mode = useSignal<CompressionMode>("gzip");
+  const tooltip = useSignal<TooltipState | null>(null);
 
   // Only show merged PRs, deduplicated to latest measurement per (prNumber, file key)
   const mergedLatest = new Map<string, PackageEvolution>();
@@ -79,11 +79,11 @@ export function BundleSizeChart({ evolutions }: Props) {
 
   // Check mode availability
   const hasModeData = fileKeys.some((fk) =>
-    fileMap.get(fk)!.some((ev) => getSize(ev, mode) != null),
+    fileMap.get(fk)!.some((ev) => getSize(ev, mode.value) != null),
   );
 
   // Effective mode: fall back to raw if no data for selected mode
-  const effectiveMode: CompressionMode = hasModeData ? mode : "raw";
+  const effectiveMode: CompressionMode = hasModeData ? mode.value : "raw";
 
   if (fileKeys.length === 0) return null;
 
@@ -137,9 +137,9 @@ export function BundleSizeChart({ evolutions }: Props) {
           {(["raw", "gzip", "brotli"] as CompressionMode[]).map((m) => (
             <button
               key={m}
-              onClick={() => setMode(m)}
+              onClick={() => (mode.value = m)}
               class={`font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${
-                mode === m
+                mode.value === m
                   ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
                   : "text-neutral-700 hover:text-neutral-400 border border-transparent"
               }`}
@@ -151,9 +151,9 @@ export function BundleSizeChart({ evolutions }: Props) {
       </div>
 
       {/* Fallback notice */}
-      {!hasModeData && mode !== "raw" && (
+      {!hasModeData && mode.value !== "raw" && (
         <p class="font-mono text-[10px] text-neutral-700">
-          No {mode} data available — showing raw sizes.
+          No {mode.value} data available — showing raw sizes.
         </p>
       )}
 
@@ -279,16 +279,16 @@ export function BundleSizeChart({ evolutions }: Props) {
                     stroke-width="1.5"
                     style="cursor: pointer;"
                     onMouseEnter={() =>
-                      setTooltip({
+                      tooltip.value = {
                         x: p.x,
                         y: p.y,
                         prNumber: p.ev.prNumber,
                         prTitle: p.ev.prTitle,
                         fileName: p.ev.fileName,
                         size: p.size,
-                      })
+                      }
                     }
-                    onMouseLeave={() => setTooltip(null)}
+                    onMouseLeave={() => (tooltip.value = null)}
                   />
                 ))}
               </g>
@@ -299,9 +299,9 @@ export function BundleSizeChart({ evolutions }: Props) {
           {tooltip &&
             (() => {
               const TW = 180;
-              const TH = tooltip.prTitle ? 44 : 30;
-              const tx = Math.min(tooltip.x + 10, W - TW - 4);
-              const ty = Math.max(tooltip.y - TH - 8, 4);
+              const TH = tooltip.value.prTitle ? 44 : 30;
+              const tx = Math.min(tooltip.value.x + 10, W - TW - 4);
+              const ty = Math.max(tooltip.value.y - TH - 8, 4);
               return (
                 <g style="pointer-events: none;">
                   <rect
@@ -322,9 +322,9 @@ export function BundleSizeChart({ evolutions }: Props) {
                     font-size="10"
                     font-weight="600"
                   >
-                    #{tooltip.prNumber} · {formatBytes(tooltip.size)}
+                    #{tooltip.value.prNumber} · {formatBytes(tooltip.value.size)}
                   </text>
-                  {tooltip.prTitle && (
+                  {tooltip.value.prTitle && (
                     <text
                       x={tx + 8}
                       y={ty + 29}
@@ -332,9 +332,9 @@ export function BundleSizeChart({ evolutions }: Props) {
                       font-family="ui-monospace,monospace"
                       font-size="9"
                     >
-                      {tooltip.prTitle.length > 22
-                        ? tooltip.prTitle.slice(0, 22) + "…"
-                        : tooltip.prTitle}
+                      {tooltip.value.prTitle.length > 22
+                        ? tooltip.value.prTitle.slice(0, 22) + "…"
+                        : tooltip.value.prTitle}
                     </text>
                   )}
                 </g>

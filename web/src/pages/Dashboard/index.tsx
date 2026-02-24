@@ -1,10 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
 import { useLocation } from "preact-iso";
-import { useModel } from "@preact/signals";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthModel } from "../../models/auth";
-import { RepositoriesModel } from "../../models/repositories";
+import { addRepository, listRepositories, removeRepository } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { useModel } from "@preact/signals";
 
 /** Format "owner/name" from two separate fields. */
 function parseRepoInput(raw: string): { owner: string; name: string } | null {
@@ -16,7 +17,27 @@ function parseRepoInput(raw: string): { owner: string; name: string } | null {
 export function Dashboard() {
   const { route } = useLocation();
   const auth = useModel(AuthModel);
-  const repos = useModel(RepositoriesModel);
+  const queryClient = useQueryClient();
+
+  const reposQuery = useQuery({
+    queryKey: ["repositories"],
+    queryFn: listRepositories,
+    enabled: auth.authenticated.value,
+  });
+
+  const addRepoMutation = useMutation({
+    mutationFn: ({ owner, name }: { owner: string; name: string }) => addRepository(owner, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+    },
+  });
+
+  const removeRepoMutation = useMutation({
+    mutationFn: (id: string) => removeRepository(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+    },
+  });
 
   const [addInput, setAddInput] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
@@ -26,8 +47,6 @@ export function Dashboard() {
     auth.checkSession().then(() => {
       if (!auth.authenticated.value) {
         route("/auth");
-      } else {
-        repos.fetchRepositories();
       }
     });
   }, []);
@@ -50,7 +69,7 @@ export function Dashboard() {
     }
     setAddLoading(true);
     try {
-      await repos.addRepo(parsed.owner, parsed.name);
+      await addRepoMutation.mutateAsync(parsed);
       setAddInput("");
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Failed to add repository");
@@ -101,19 +120,23 @@ export function Dashboard() {
               Tracked repositories
             </h2>
             <span class="font-mono text-xs text-neutral-600">
-              {repos.repositories.value.length} linked
+              {(reposQuery.data ?? []).length} linked
             </span>
           </div>
 
-          {repos.reposLoading.value ? (
+          {reposQuery.isLoading ? (
             <div class="py-10 text-center">
               <span class="font-mono text-xs text-neutral-600">loading…</span>
             </div>
-          ) : repos.reposError.value ? (
+          ) : reposQuery.error ? (
             <div class="py-10 text-center">
-              <span class="font-mono text-xs text-red-400">{repos.reposError.value}</span>
+              <span class="font-mono text-xs text-red-400">
+                {reposQuery.error instanceof Error
+                  ? reposQuery.error.message
+                  : "Failed to load repositories"}
+              </span>
             </div>
-          ) : repos.repositories.value.length === 0 ? (
+          ) : (reposQuery.data ?? []).length === 0 ? (
             <div class="py-12 text-center px-5">
               <div class="w-10 h-10 rounded-lg bg-neutral-800 flex items-center justify-center mx-auto mb-3">
                 <svg
@@ -135,7 +158,7 @@ export function Dashboard() {
             </div>
           ) : (
             <ul class="divide-y divide-neutral-800/60">
-              {repos.repositories.value.map((repo) => (
+              {(reposQuery.data ?? []).map((repo) => (
                 <li
                   key={repo.id}
                   class="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.015] transition-colors group"
@@ -158,7 +181,7 @@ export function Dashboard() {
                       variant="danger-icon"
                       onClick={async () => {
                         if (confirm(`Remove ${repo.owner}/${repo.name}?`)) {
-                          await repos.removeRepo(repo.id);
+                          await removeRepoMutation.mutateAsync(repo.id);
                         }
                       }}
                       title="Remove repository"

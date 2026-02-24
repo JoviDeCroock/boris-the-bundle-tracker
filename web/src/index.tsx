@@ -8,10 +8,12 @@ import {
   lazy,
 } from "preact-iso";
 import { createDispatcher, HoofdProvider } from "hoofd/preact";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { DashboardHeader } from "./components/DashboardHeader";
+import { createQueryClient } from "./lib/query-client";
 import "./style.css";
 
 const Home = lazy(() => import("./pages/Home/index").then((module) => module.Home));
@@ -49,11 +51,14 @@ function AppContent() {
   );
 }
 
+const queryClient = createQueryClient();
 export function App() {
   return (
-    <LocationProvider>
-      <AppContent />
-    </LocationProvider>
+    <QueryClientProvider client={queryClient}>
+      <LocationProvider>
+        <AppContent />
+      </LocationProvider>
+    </QueryClientProvider>
   );
 }
 

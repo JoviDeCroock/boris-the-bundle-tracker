@@ -1,29 +1,83 @@
 import { useEffect } from "preact/hooks";
 import { useLocation } from "preact-iso";
 import { useModel } from "@preact/signals";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AuthModel } from "../../models/auth";
-import { BillingModel } from "../../models/billing";
 import { Button } from "../../components/ui/Button";
 import { Alert } from "../../components/ui/Alert";
+import { getSubscription } from "../../lib/api";
+import { authClient } from "../../lib/auth";
 
 export function Billing() {
   const { route, query } = useLocation();
   const auth = useModel(AuthModel);
-  const billing = useModel(BillingModel);
 
   const success = query.success === "true";
+
+  const subscriptionQuery = useQuery({
+    queryKey: ["subscription"],
+    queryFn: getSubscription,
+    enabled: auth.authenticated.value,
+  });
+
+  const upgradeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authClient.$fetch<{ url: string }>("/checkout", {
+        method: "POST",
+        body: { slug: "pro" },
+      });
+
+      if ("data" in res && res.data?.url) {
+        window.location.href = res.data.url;
+        return;
+      }
+
+      if ("url" in res) {
+        window.location.href = res.url;
+        return;
+      }
+
+      throw new Error("Failed to start checkout");
+    },
+  });
+
+  const manageMutation = useMutation({
+    mutationFn: async () => {
+      const res = await authClient.$fetch<{ url: string }>("/customer/portal", {
+        method: "GET",
+      });
+
+      if ("data" in res && res.data?.url) {
+        window.location.href = res.data.url;
+        return;
+      }
+
+      if ("url" in res) {
+        window.location.href = res.url;
+        return;
+      }
+
+      throw new Error("Failed to open customer portal");
+    },
+  });
+
+  const plan = subscriptionQuery.data?.plan ?? "free";
+  const isPro = plan === "pro";
+  const pageError =
+    (subscriptionQuery.error instanceof Error && subscriptionQuery.error.message) ||
+    (upgradeMutation.error instanceof Error && upgradeMutation.error.message) ||
+    (manageMutation.error instanceof Error && manageMutation.error.message) ||
+    null;
 
   useEffect(() => {
     auth.checkSession().then(() => {
       if (!auth.authenticated.value) {
         route("/auth");
-        return;
       }
-      billing.fetch();
     });
   }, []);
 
-  if (billing.loading.value) {
+  if (auth.loading.value || subscriptionQuery.isLoading) {
     return (
       <div class="min-h-screen bg-neutral-950 pt-14 flex items-center justify-center">
         <span class="font-mono text-xs text-neutral-600">Loading...</span>
@@ -49,25 +103,25 @@ export function Billing() {
           </div>
         )}
 
-        {billing.error.value && <Alert class="mb-6">{billing.error.value}</Alert>}
+        {pageError && <Alert class="mb-6">{pageError}</Alert>}
 
         {/* Current Plan */}
         <div
           class="rounded-xl border overflow-hidden"
-          style={
-            billing.isPro.value
-              ? "background: #111113; border-color: rgba(249,115,22,0.25); box-shadow: 0 0 30px rgba(249,115,22,0.04);"
-              : "background: #111113; border-color: rgba(255,255,255,0.06);"
-          }
+            style={
+              isPro
+                ? "background: #111113; border-color: rgba(249,115,22,0.25); box-shadow: 0 0 30px rgba(249,115,22,0.04);"
+                : "background: #111113; border-color: rgba(255,255,255,0.06);"
+            }
         >
           <div class="px-6 py-5 border-b border-neutral-800/60">
             <div class="flex items-center justify-between">
               <div>
                 <div class="flex items-center gap-2 mb-1">
                   <h2 class="text-base font-semibold text-white">
-                    {billing.isPro.value ? "Pro Plan" : "Free Plan"}
+                    {isPro ? "Pro Plan" : "Free Plan"}
                   </h2>
-                  {billing.isPro.value && (
+                  {isPro && (
                     <span
                       class="font-mono text-xs px-2 py-0.5 rounded-full font-semibold"
                       style="background: #f97316; color: #431407;"
@@ -81,12 +135,12 @@ export function Billing() {
           </div>
 
           <div class="px-6 py-5">
-            {billing.isPro.value ? (
+            {isPro ? (
               <div class="flex items-center justify-between">
                 <p class="text-xs text-neutral-600 font-mono">
                   Manage or cancel your subscription via Polar.
                 </p>
-                <Button variant="secondary" size="sm" onClick={() => billing.manage()}>
+                <Button variant="secondary" size="sm" onClick={() => manageMutation.mutate()}>
                   Manage subscription
                 </Button>
               </div>
@@ -100,11 +154,11 @@ export function Billing() {
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => billing.upgrade()}
-                  disabled={billing.upgradeLoading.value}
+                  onClick={() => upgradeMutation.mutate()}
+                  disabled={upgradeMutation.isPending}
                   class="shrink-0"
                 >
-                  {billing.upgradeLoading.value ? "Redirecting…" : "Upgrade to Pro →"}
+                  {upgradeMutation.isPending ? "Redirecting…" : "Upgrade to Pro →"}
                 </Button>
               </div>
             )}

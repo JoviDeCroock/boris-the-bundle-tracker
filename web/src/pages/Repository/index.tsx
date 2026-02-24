@@ -1,12 +1,21 @@
 import { useEffect, useState } from "preact/hooks";
 import { useLocation, useRoute } from "preact-iso";
 import { useModel, useSignal } from "@preact/signals";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthModel } from "../../models/auth";
-import { RepositoriesModel } from "../../models/repositories";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import type { Repository, PackageEvolution } from "../../lib/api";
-import { updateEvolution } from "../../lib/api";
+import {
+  createApiKey,
+  deleteApiKey,
+  deletePackage,
+  getPackageEvolutions,
+  listApiKeys,
+  listPackages,
+  listRepositories,
+  updateEvolution,
+} from "../../lib/api";
 import { BundleSizeChart } from "../../components/BundleSizeChart";
 import actionDefinitionFile from "../../../action/action.yml?raw";
 import actionRuntimeFile from "../../../action/index.js?raw";
@@ -217,27 +226,41 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ApiKeysPanel({ repoId }: { repoId: string }) {
-  const repos = useModel(RepositoriesModel);
-  const [newKeyName, setNewKeyName] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const newKeyName= useSignal("");
+  const createError = useSignal<string | null>(null);
+  const newKeyValue = useSignal<string | null>(null);
 
-  useEffect(() => {
-    repos.fetchApiKeys(repoId);
-  }, [repoId]);
+  const apiKeysQuery = useQuery({
+    queryKey: ["repositories", repoId, "api-keys"],
+    queryFn: () => listApiKeys(repoId),
+    enabled: Boolean(repoId),
+  });
+
+  const createApiKeyMutation = useMutation({
+    mutationFn: (name: string) => createApiKey(repoId, name),
+    onSuccess: (key) => {
+      newKeyValue.value = key.key ?? null;
+      queryClient.invalidateQueries({ queryKey: ["repositories", repoId, "api-keys"] });
+    },
+  });
+
+  const removeApiKeyMutation = useMutation({
+    mutationFn: (keyId: string) => deleteApiKey(repoId, keyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["repositories", repoId, "api-keys"] });
+    },
+  });
 
   async function handleCreate(e: Event) {
     e.preventDefault();
-    if (!newKeyName.trim()) return;
-    setCreating(true);
-    setCreateError(null);
+    if (!newKeyName.value.trim()) return;
+    createError.value = null;
     try {
-      await repos.addApiKey(repoId, newKeyName.trim());
-      setNewKeyName("");
+      await createApiKeyMutation.mutateAsync(newKeyName.value.trim());
+      newKeyName.value = "";
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create key");
-    } finally {
-      setCreating(false);
+      createError.value = err instanceof Error ? err.message : "Failed to create key";
     }
   }
 
@@ -255,7 +278,7 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
 
       <div class="p-5">
         {/* One-time key reveal */}
-        {repos.newKeyValue.value && (
+        {newKeyValue.value && (
           <div
             class="mb-5 p-4 rounded-lg border"
             style="background: rgba(34,197,94,0.05); border-color: rgba(34,197,94,0.2);"
@@ -264,11 +287,11 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
               Copy this key now — it will not be shown again.
             </p>
             <code class="block text-xs text-emerald-300 break-all font-mono leading-relaxed">
-              {repos.newKeyValue.value}
+              {newKeyValue.value}
             </code>
             <button
               class="mt-3 font-mono text-xs text-emerald-600 hover:text-emerald-400 transition-colors"
-              onClick={() => (repos.newKeyValue.value = null)}
+              onClick={() => (newKeyValue.value = null)}
             >
               Dismiss ×
             </button>
@@ -280,24 +303,24 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
           <Input
             type="text"
             placeholder="Key name, e.g. CI"
-            value={newKeyName}
-            onInput={(e) => setNewKeyName((e.target as HTMLInputElement).value)}
+            value={newKeyName.value}
+            onInput={(e) => (newKeyName.value = (e.target as HTMLInputElement).value)}
             class="flex-1"
           />
-          <Button type="submit" size="sm" disabled={!newKeyName.trim() || creating}>
-            {creating ? "Creating…" : "Create"}
+          <Button type="submit" size="sm" disabled={!newKeyName.value.trim() || createApiKeyMutation.isPending}>
+            {createApiKeyMutation.isPending ? "Creating…" : "Create"}
           </Button>
         </form>
-        {createError && <p class="font-mono text-xs text-red-400 mb-4">{createError}</p>}
+        {createError.value && <p class="font-mono text-xs text-red-400 mb-4">{createError.value}</p>}
 
         {/* Key list */}
-        {repos.apiKeysLoading.value ? (
+        {apiKeysQuery.isLoading ? (
           <p class="font-mono text-xs text-neutral-600 py-4 text-center">Loading…</p>
-        ) : repos.apiKeys.value.length === 0 ? (
+        ) : (apiKeysQuery.data ?? []).length === 0 ? (
           <p class="font-mono text-xs text-neutral-700 py-4 text-center">No API keys yet.</p>
         ) : (
           <ul class="divide-y divide-neutral-800/60">
-            {repos.apiKeys.value.map((key) => (
+            {(apiKeysQuery.data ?? []).map((key) => (
               <li key={key.id} class="flex items-center justify-between py-3 first:pt-0">
                 <div class="min-w-0">
                   <p class="text-sm text-white font-medium">{key.name}</p>
@@ -312,7 +335,7 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
                   variant="danger-icon"
                   onClick={async () => {
                     if (confirm(`Delete key "${key.name}"?`)) {
-                      await repos.removeApiKey(repoId, key.id);
+                      await removeApiKeyMutation.mutateAsync(key.id);
                     }
                   }}
                   title="Delete key"
@@ -363,18 +386,26 @@ function EvolutionsTable({
     byPr.set(ev.prNumber, files);
   }
 
-  const updatingPr = useSignal<number | null>(null);
+  const queryClient = useQueryClient();
+  const [updatingPr, setUpdatingPr] = useState<number | null>(null);
+  const markMergedMutation = useMutation({
+    mutationFn: (prNumber: number) => updateEvolution(repoId, packageId, prNumber, { prMerged: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["repositories", repoId, "packages", packageId, "evolutions"],
+      });
+    },
+  });
 
   async function handleMarkMerged(prNumber: number) {
-    updatingPr.value = prNumber;
+    setUpdatingPr(prNumber);
     try {
-      await updateEvolution(repoId, packageId, prNumber, { prMerged: true });
-      window.location.reload();
+      await markMergedMutation.mutateAsync(prNumber);
     } catch (e) {
       console.error(e);
       alert("Failed to mark as merged");
     } finally {
-      updatingPr.value = null;
+      setUpdatingPr(null);
     }
   }
 
@@ -462,9 +493,9 @@ function EvolutionsTable({
                             type="button"
                             class="text-[10px] text-neutral-600 hover:text-emerald-500 transition-colors"
                             onClick={() => handleMarkMerged(prNumber)}
-                            disabled={updatingPr.value === prNumber}
+                            disabled={updatingPr === prNumber}
                           >
-                            {updatingPr.value === prNumber ? "..." : "mark merged"}
+                            {updatingPr === prNumber ? "..." : "mark merged"}
                           </button>
                         )}
                       </div>
@@ -497,20 +528,34 @@ function PackagesPanel({
   repoId: string;
   repository: Repository | undefined;
 }) {
-  const repos = useModel(RepositoriesModel);
+  const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    repos.fetchPackages(repoId);
-  }, [repoId]);
+  const packagesQuery = useQuery({
+    queryKey: ["repositories", repoId, "packages"],
+    queryFn: () => listPackages(repoId),
+    enabled: Boolean(repoId),
+  });
 
-  async function handleExpand(packageId: string) {
+  const evolutionsQuery = useQuery({
+    queryKey: ["repositories", repoId, "packages", expandedId, "evolutions"],
+    queryFn: () => getPackageEvolutions(repoId, expandedId as string),
+    enabled: Boolean(repoId && expandedId),
+  });
+
+  const removePackageMutation = useMutation({
+    mutationFn: (packageId: string) => deletePackage(repoId, packageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["repositories", repoId, "packages"] });
+    },
+  });
+
+  function handleExpand(packageId: string) {
     if (expandedId === packageId) {
       setExpandedId(null);
       return;
     }
     setExpandedId(packageId);
-    await repos.fetchEvolutions(repoId, packageId);
   }
 
   return (
@@ -525,11 +570,11 @@ function PackagesPanel({
         </p>
       </div>
 
-      {repos.packagesLoading.value ? (
+      {packagesQuery.isLoading ? (
         <div class="py-10 text-center">
           <span class="font-mono text-xs text-neutral-600">Loading…</span>
         </div>
-      ) : repos.packages.value.length === 0 ? (
+      ) : (packagesQuery.data ?? []).length === 0 ? (
         <div class="py-10 px-5 text-center">
           <p class="font-mono text-xs text-neutral-700">No packages tracked yet.</p>
           <p class="font-mono text-xs text-neutral-800 mt-1">
@@ -538,7 +583,7 @@ function PackagesPanel({
         </div>
       ) : (
         <ul class="divide-y divide-neutral-800/60">
-          {repos.packages.value.map((pkg) => (
+          {(packagesQuery.data ?? []).map((pkg) => (
             <li key={pkg.id} class="px-5">
               <div class="flex items-center justify-between py-3.5">
                 <div class="min-w-0">
@@ -553,7 +598,7 @@ function PackagesPanel({
                     variant="danger-icon"
                     onClick={async () => {
                       if (confirm(`Delete package "${pkg.name}" and all its data?`)) {
-                        await repos.removePackage(repoId, pkg.id);
+                        await removePackageMutation.mutateAsync(pkg.id);
                         if (expandedId === pkg.id) setExpandedId(null);
                       }
                     }}
@@ -578,28 +623,32 @@ function PackagesPanel({
 
               {expandedId === pkg.id && (
                 <div class="pb-4 space-y-3">
-                  {repos.evolutionsLoading.value ? (
+                  {evolutionsQuery.isLoading ? (
                     <div
                       class="rounded-lg border border-neutral-800/60 p-4"
                       style="background: rgba(0,0,0,0.2);"
                     >
                       <p class="font-mono text-xs text-neutral-600">Loading history…</p>
                     </div>
-                  ) : repos.evolutionsError.value ? (
+                  ) : evolutionsQuery.error ? (
                     <div
                       class="rounded-lg border border-neutral-800/60 p-4"
                       style="background: rgba(0,0,0,0.2);"
                     >
-                      <p class="font-mono text-xs text-red-400">{repos.evolutionsError.value}</p>
+                      <p class="font-mono text-xs text-red-400">
+                        {evolutionsQuery.error instanceof Error
+                          ? evolutionsQuery.error.message
+                          : "Failed to load evolutions"}
+                      </p>
                     </div>
                   ) : (
                     <>
-                      {repos.evolutions.value.some((ev) => ev.prMerged) && (
+                      {(evolutionsQuery.data?.evolutions ?? []).some((ev) => ev.prMerged) && (
                         <div
                           class="rounded-lg border border-neutral-800/60 p-4"
                           style="background: rgba(0,0,0,0.2);"
                         >
-                          <BundleSizeChart evolutions={repos.evolutions.value} />
+                          <BundleSizeChart evolutions={evolutionsQuery.data?.evolutions ?? []} />
                         </div>
                       )}
                       <div
@@ -607,7 +656,7 @@ function PackagesPanel({
                         style="background: rgba(0,0,0,0.2);"
                       >
                         <EvolutionsTable
-                          evolutions={repos.evolutions.value}
+                          evolutions={evolutionsQuery.data?.evolutions ?? []}
                           repository={repository}
                           repoId={repoId}
                           packageId={pkg.id}
@@ -631,24 +680,29 @@ export function RepositoryPage() {
   const { route } = useLocation();
   const { params } = useRoute();
   const auth = useModel(AuthModel);
-  const repos = useModel(RepositoriesModel);
   const [actionFilesModalOpen, setActionFilesModalOpen] = useState(false);
 
   const repoId = params.id as string;
 
-  const repository: Repository | undefined = repos.repositories.value.find((r) => r.id === repoId);
+  const repositoriesQuery = useQuery({
+    queryKey: ["repositories"],
+    queryFn: listRepositories,
+    enabled: auth.authenticated.value,
+  });
+
+  const repository: Repository | undefined = (repositoriesQuery.data ?? []).find(
+    (r) => r.id === repoId,
+  );
 
   useEffect(() => {
     auth.checkSession().then(() => {
       if (!auth.authenticated.value) {
         route("/auth");
-      } else if (repos.repositories.value.length === 0) {
-        repos.fetchRepositories();
       }
     });
   }, []);
 
-  if (auth.loading.value || repos.reposLoading.value) {
+  if (auth.loading.value || repositoriesQuery.isLoading) {
     return (
       <div class="min-h-screen bg-neutral-950 pt-14 flex items-center justify-center">
         <span class="font-mono text-xs text-neutral-600">Loading…</span>
