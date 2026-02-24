@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Bindings } from "../types";
 
@@ -128,7 +128,12 @@ report.post("/", async (c) => {
   const repo = await db
     .select()
     .from(schema.repository)
-    .where(and(eq(schema.repository.owner, owner), eq(schema.repository.name, name)))
+    .where(
+      and(
+        sql`lower(${schema.repository.owner}) = lower(${owner})`,
+        sql`lower(${schema.repository.name}) = lower(${name})`,
+      ),
+    )
     .get();
 
   if (!repo || repo.id !== keyRecord.repositoryId) {

@@ -4,7 +4,7 @@ const zlib = require("node:zlib");
 const { execSync } = require("node:child_process");
 
 function getInput(name, fallback = "") {
-  const key = `INPUT_${name.replace(/ /g, "_").replace(/-/g, "_").toUpperCase()}`;
+  const key = `INPUT_${name.toUpperCase()}`;
   return (process.env[key] || fallback).trim();
 }
 
@@ -177,7 +177,7 @@ function measureFileSizes(filePath) {
 function collectSnapshot(rootDir) {
   const packages = [];
   for (const entry of findPackages(rootDir)) {
-    const exportsList = parseExports(entry.pkg.exports);
+    const exportsList = parseExports(entry.pkg.exports).filter((e) => e.file.endsWith(".js") || e.file.endsWith(".mjs") || e.file.endsWith(".cjs"));
     if (!exportsList.length) continue;
 
     const exportGroups = new Map();
@@ -292,7 +292,7 @@ function setOutput(name, value) {
 
 async function main() {
   const apiKey = getInput("api-key");
-  const apiUrl = getInput("api-url", "https://api.example.com");
+  const apiUrl = "https://boris-api.resynapse.dev";
   const baseBranchInput = getInput("base-branch", "main");
   const workingDirectory = path.resolve(getInput("working-directory", "."));
   const installCommand = getInput("install-command", "npm ci");
@@ -301,6 +301,7 @@ async function main() {
     getInput("build-command", "npm run build"),
   );
 
+  console.log('apiKey', apiKey ? '***' : '(not set)');
   if (!apiKey) throw new Error("Missing required input: api-key");
 
   const eventName = process.env.GITHUB_EVENT_NAME;

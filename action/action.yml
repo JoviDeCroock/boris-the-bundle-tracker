@@ -5,10 +5,6 @@ inputs:
   api-key:
     description: 'Boris API key (bbt_...)'
     required: true
-  api-url:
-    description: 'Boris API base URL'
-    required: false
-    default: 'https://api.example.com'
   base-branch:
     description: 'Base branch to compare against'
     required: false
