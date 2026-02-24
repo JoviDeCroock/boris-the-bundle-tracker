@@ -28,7 +28,7 @@ app.use(
   "/api/*",
   cors({
     origin: (origin, c) =>
-      isProduction(c.env) ? "https://app.example.com" : "http://localhost:5173",
+      isProduction(c.env) ? "https://boris.resynapse.dev" : "http://localhost:5173",
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -96,7 +96,7 @@ app.get("/api/billing-success", async (c) => {
 
   return c.redirect(
     isProduction(c.env)
-      ? "https://app.example.com/billing?success=true"
+      ? "https://boris.resynapse.dev/billing?success=true"
       : "http://localhost:5173/billing?success=true",
   );
 });

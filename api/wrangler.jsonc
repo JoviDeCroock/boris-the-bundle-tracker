@@ -1,18 +1,33 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "api",
+  "name": "boris-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-01",
   "compatibility_flags": ["nodejs_compat"],
+  "preview_urls": false,
+  "workers_dev": false,
+  "placement": {"mode": "smart"},
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
+  "routes": [
+    {
+      "pattern": "boris-api.resynapse.dev",
+      "custom_domain": true
+    }
+  ],
   "vars": {
-    "BETTER_AUTH_URL": "https://api.example.com",
+    "BETTER_AUTH_URL": "https://boris.resynapse.dev",
     "LOCAL": "false",
   },
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "app-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_name": "boris-db",
+      "database_id": "baff95ab-0e45-48b0-a094-fe5336ca1335",
       "migrations_dir": "drizzle/migrations",
     },
   ],
