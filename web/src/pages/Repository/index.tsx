@@ -315,12 +315,14 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
               {copyStatus.value && (
                 <span class="font-mono text-[11px] text-emerald-400">{copyStatus.value}</span>
               )}
-              <button
-                class="font-mono text-xs text-emerald-600 hover:text-emerald-400 transition-colors"
+              <Button
+                size="sm"
+                variant="ghost"
+                class="font-mono"
                 onClick={() => (newKeyValue.value = null)}
               >
                 Dismiss ×
-              </button>
+              </Button>
             </div>
           </div>
         )}
