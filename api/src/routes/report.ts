@@ -39,10 +39,18 @@ interface ReportPayload {
       files: Array<{
         /** Relative path of the output file, e.g. "dist/index.js". */
         file: string;
-        /** Size in bytes on the base (main) branch. */
+        /** Raw size in bytes on the base (main) branch. */
         mainSize: number;
-        /** Size in bytes on the PR branch. */
+        /** Raw size in bytes on the PR branch. */
         prSize: number;
+        /** Gzip size in bytes on the base (main) branch. */
+        gzipMainSize?: number;
+        /** Gzip size in bytes on the PR branch. */
+        gzipPrSize?: number;
+        /** Brotli size in bytes on the base (main) branch. */
+        brotliMainSize?: number;
+        /** Brotli size in bytes on the PR branch. */
+        brotliPrSize?: number;
       }>;
     }>;
   }>;
@@ -54,7 +62,9 @@ interface ReportPayload {
  * Authenticated with `Authorization: Bearer <api-key>`.
  * The API key must be scoped to the repository named in the payload.
  *
- * Packages are upserted automatically; evolution records are appended.
+ * Packages are upserted automatically; evolution records are upserted by
+ * (packageId, prNumber, exportPath, fileName, commitSha) to prevent
+ * duplicate rows on action re-runs.
  */
 report.post("/", async (c) => {
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -131,9 +141,9 @@ report.post("/", async (c) => {
     .set({ lastUsedAt: new Date() })
     .where(eq(schema.apiKey.id, keyRecord.id));
 
-  // ── Upsert packages and insert evolution records ──────────────────────────
+  // ── Upsert packages and evolution records ─────────────────────────────────
   const now = new Date();
-  const insertedEvolutions: string[] = [];
+  let upsertedCount = 0;
 
   for (const pkg of packages) {
     if (!pkg.name) continue;
@@ -162,7 +172,9 @@ report.post("/", async (c) => {
         .where(eq(schema.package_.id, pkgRecord.id));
     }
 
-    // Insert evolution records for each file
+    // Upsert evolution records — one per (package, PR, exportPath, file, commitSha).
+    // If the action re-runs on the same commit, update the mutable fields instead
+    // of inserting a duplicate row.
     for (const exp of pkg.exports ?? []) {
       for (const fileEntry of exp.files ?? []) {
         if (
@@ -173,26 +185,61 @@ report.post("/", async (c) => {
           continue;
         }
 
-        const evolutionId = crypto.randomUUID();
-        await db.insert(schema.packageEvolution).values({
-          id: evolutionId,
-          packageId: pkgRecord.id,
-          prNumber,
-          prTitle: prTitle ?? null,
-          branch,
-          commitSha,
-          prMerged: Boolean(prMerged),
-          prState: prState === "closed" ? "closed" : "open",
-          exportPath: exp.exportPath,
-          fileName: fileEntry.file,
-          mainSize: fileEntry.mainSize,
-          prSize: fileEntry.prSize,
-          reportedAt: now,
-        });
-        insertedEvolutions.push(evolutionId);
+        const existing = await db
+          .select({ id: schema.packageEvolution.id })
+          .from(schema.packageEvolution)
+          .where(
+            and(
+              eq(schema.packageEvolution.packageId, pkgRecord.id),
+              eq(schema.packageEvolution.prNumber, prNumber),
+              eq(schema.packageEvolution.exportPath, exp.exportPath),
+              eq(schema.packageEvolution.fileName, fileEntry.file),
+              eq(schema.packageEvolution.commitSha, commitSha),
+            ),
+          )
+          .get();
+
+        if (existing) {
+          await db
+            .update(schema.packageEvolution)
+            .set({
+              prTitle: prTitle ?? null,
+              prMerged: Boolean(prMerged),
+              prState: prState === "closed" ? "closed" : "open",
+              mainSize: fileEntry.mainSize,
+              prSize: fileEntry.prSize,
+              gzipMainSize: fileEntry.gzipMainSize ?? null,
+              gzipPrSize: fileEntry.gzipPrSize ?? null,
+              brotliMainSize: fileEntry.brotliMainSize ?? null,
+              brotliPrSize: fileEntry.brotliPrSize ?? null,
+              reportedAt: now,
+            })
+            .where(eq(schema.packageEvolution.id, existing.id));
+        } else {
+          await db.insert(schema.packageEvolution).values({
+            id: crypto.randomUUID(),
+            packageId: pkgRecord.id,
+            prNumber,
+            prTitle: prTitle ?? null,
+            branch,
+            commitSha,
+            prMerged: Boolean(prMerged),
+            prState: prState === "closed" ? "closed" : "open",
+            exportPath: exp.exportPath,
+            fileName: fileEntry.file,
+            mainSize: fileEntry.mainSize,
+            prSize: fileEntry.prSize,
+            gzipMainSize: fileEntry.gzipMainSize ?? null,
+            gzipPrSize: fileEntry.gzipPrSize ?? null,
+            brotliMainSize: fileEntry.brotliMainSize ?? null,
+            brotliPrSize: fileEntry.brotliPrSize ?? null,
+            reportedAt: now,
+          });
+        }
+        upsertedCount++;
       }
     }
   }
 
-  return c.json({ success: true, recordsCreated: insertedEvolutions.length });
+  return c.json({ success: true, recordsCreated: upsertedCount });
 });

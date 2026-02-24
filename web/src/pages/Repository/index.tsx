@@ -38,6 +38,24 @@ function diffBadge(mainSize: number, prSize: number) {
   );
 }
 
+function SizeCell({ raw, gzip, brotli }: { raw: number; gzip: number | null; brotli: number | null }) {
+  return (
+    <div class="font-mono text-xs space-y-0.5">
+      <div class="text-neutral-300">{formatBytes(raw)}</div>
+      {gzip != null && (
+        <div class="text-neutral-500">
+          {formatBytes(gzip)} <span class="text-neutral-600">gz</span>
+        </div>
+      )}
+      {brotli != null && (
+        <div class="text-neutral-500">
+          {formatBytes(brotli)} <span class="text-neutral-600">br</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ApiKeysPanel({ repoId }: { repoId: string }) {
@@ -151,7 +169,13 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
   );
 }
 
-function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
+function EvolutionsTable({
+  evolutions,
+  repository,
+}: {
+  evolutions: PackageEvolution[];
+  repository: Repository | undefined;
+}) {
   // Group by PR and keep only the latest measurement for each file in that PR.
   const byPr = new Map<number, Map<string, PackageEvolution>>();
   for (const ev of evolutions) {
@@ -182,7 +206,7 @@ function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
             <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">File</th>
             <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">Main</th>
             <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">PR</th>
-            <th class="pb-2 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">Change</th>
+            <th class="pb-2 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">Change (gz)</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-800/40">
@@ -193,6 +217,10 @@ function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
                 ? entry
                 : latest,
             );
+            const prUrl =
+              repository
+                ? `https://github.com/${repository.owner}/${repository.name}/pull/${prNumber}`
+                : `#${prNumber}`;
 
             return entries.map((ev, i) => (
               <tr key={ev.id} class="hover:bg-white/[0.015] transition-colors">
@@ -200,7 +228,9 @@ function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
                   <>
                     <td class="py-2.5 pr-4 align-top" rowSpan={entries.length}>
                       <a
-                        href={`https://github.com/${ev.branch}`}
+                        href={prUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         class="font-mono text-xs text-orange-500 hover:text-orange-400 transition-colors"
                       >
                         #{prNumber}
@@ -227,9 +257,26 @@ function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
                   </>
                 )}
                 <td class="py-2.5 pr-4 font-mono text-xs text-neutral-500">{ev.fileName}</td>
-                <td class="py-2.5 pr-4 font-mono text-xs text-neutral-600 text-right tabular-nums">{formatBytes(ev.mainSize)}</td>
-                <td class="py-2.5 pr-4 font-mono text-xs text-neutral-400 text-right tabular-nums">{formatBytes(ev.prSize)}</td>
-                <td class="py-2.5 text-right">{diffBadge(ev.mainSize, ev.prSize)}</td>
+                <td class="py-2.5 pr-4 align-top">
+                  <SizeCell
+                    raw={ev.mainSize}
+                    gzip={ev.gzipMainSize}
+                    brotli={ev.brotliMainSize}
+                  />
+                </td>
+                <td class="py-2.5 pr-4 align-top">
+                  <SizeCell
+                    raw={ev.prSize}
+                    gzip={ev.gzipPrSize}
+                    brotli={ev.brotliPrSize}
+                  />
+                </td>
+                <td class="py-2.5 text-right">
+                  {diffBadge(
+                    ev.gzipMainSize ?? ev.mainSize,
+                    ev.gzipPrSize ?? ev.prSize,
+                  )}
+                </td>
               </tr>
             ));
           })}
@@ -239,7 +286,7 @@ function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
   );
 }
 
-function PackagesPanel({ repoId }: { repoId: string }) {
+function PackagesPanel({ repoId, repository }: { repoId: string; repository: Repository | undefined }) {
   const repos = useModel(RepositoriesModel);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -312,7 +359,7 @@ function PackagesPanel({ repoId }: { repoId: string }) {
                     ) : repos.evolutionsError.value ? (
                       <p class="font-mono text-xs text-red-400">{repos.evolutionsError.value}</p>
                     ) : (
-                      <EvolutionsTable evolutions={repos.evolutions.value} />
+                      <EvolutionsTable evolutions={repos.evolutions.value} repository={repository} />
                     )}
                   </div>
                 </div>
@@ -369,7 +416,7 @@ export function RepositoryPage() {
           </span>
         </div>
 
-        <PackagesPanel repoId={repoId} />
+        <PackagesPanel repoId={repoId} repository={repository} />
         <ApiKeysPanel repoId={repoId} />
 
         {/* Setup instructions */}
