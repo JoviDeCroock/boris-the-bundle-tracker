@@ -132,7 +132,13 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
                 }}
                 title="Delete key"
               >
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={2}>
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width={2}
+                >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -149,12 +155,16 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
 }
 
 function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
-  // Group by prNumber so each PR is one row showing all files
-  const byPr = new Map<number, PackageEvolution[]>();
+  // Group by PR and keep only the latest measurement for each file in that PR.
+  const byPr = new Map<number, Map<string, PackageEvolution>>();
   for (const ev of evolutions) {
-    const list = byPr.get(ev.prNumber) ?? [];
-    list.push(ev);
-    byPr.set(ev.prNumber, list);
+    const key = `${ev.exportPath}::${ev.fileName}`;
+    const files = byPr.get(ev.prNumber) ?? new Map<string, PackageEvolution>();
+    const existing = files.get(key);
+    if (!existing || new Date(ev.reportedAt).getTime() > new Date(existing.reportedAt).getTime()) {
+      files.set(key, ev);
+    }
+    byPr.set(ev.prNumber, files);
   }
 
   if (byPr.size === 0) {
@@ -171,6 +181,7 @@ function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
         <thead>
           <tr class="text-left text-neutral-500 text-xs border-b border-neutral-800">
             <th class="pb-2 pr-4 font-medium">PR</th>
+            <th class="pb-2 pr-4 font-medium">Status</th>
             <th class="pb-2 pr-4 font-medium">File</th>
             <th class="pb-2 pr-4 font-medium">Main</th>
             <th class="pb-2 pr-4 font-medium">PR</th>
@@ -178,31 +189,55 @@ function EvolutionsTable({ evolutions }: { evolutions: PackageEvolution[] }) {
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-800/50">
-          {Array.from(byPr.entries()).map(([prNumber, entries]) =>
-            entries.map((ev, i) => (
+          {Array.from(byPr.entries()).map(([prNumber, fileMap]) => {
+            const entries = Array.from(fileMap.values());
+            const latestEntry = entries.reduce((latest, entry) =>
+              new Date(entry.reportedAt).getTime() > new Date(latest.reportedAt).getTime()
+                ? entry
+                : latest,
+            );
+
+            return entries.map((ev, i) => (
               <tr key={ev.id} class="text-neutral-300">
                 {i === 0 && (
-                  <td class="py-2 pr-4 align-top" rowSpan={entries.length}>
-                    <a
-                      href={`https://github.com/${ev.branch}`}
-                      class="text-violet-400 hover:text-violet-300 font-medium"
-                    >
-                      #{prNumber}
-                    </a>
-                    {ev.prTitle && (
-                      <p class="text-xs text-neutral-500 mt-0.5 max-w-[12rem] truncate">
-                        {ev.prTitle}
-                      </p>
-                    )}
-                  </td>
+                  <>
+                    <td class="py-2 pr-4 align-top" rowSpan={entries.length}>
+                      <a
+                        href={`https://github.com/${ev.branch}`}
+                        class="text-violet-400 hover:text-violet-300 font-medium"
+                      >
+                        #{prNumber}
+                      </a>
+                      {ev.prTitle && (
+                        <p class="text-xs text-neutral-500 mt-0.5 max-w-[12rem] truncate">
+                          {ev.prTitle}
+                        </p>
+                      )}
+                    </td>
+                    <td class="py-2 pr-4 align-top" rowSpan={entries.length}>
+                      {latestEntry.prMerged ? (
+                        <span class="text-[11px] uppercase tracking-wide px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                          Merged
+                        </span>
+                      ) : latestEntry.prState === "closed" ? (
+                        <span class="text-[11px] uppercase tracking-wide px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">
+                          Closed
+                        </span>
+                      ) : (
+                        <span class="text-[11px] uppercase tracking-wide px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                          Open
+                        </span>
+                      )}
+                    </td>
+                  </>
                 )}
                 <td class="py-2 pr-4 font-mono text-xs text-neutral-400">{ev.fileName}</td>
                 <td class="py-2 pr-4 font-mono text-xs">{formatBytes(ev.mainSize)}</td>
                 <td class="py-2 pr-4 font-mono text-xs">{formatBytes(ev.prSize)}</td>
                 <td class="py-2">{diffBadge(ev.mainSize, ev.prSize)}</td>
               </tr>
-            )),
-          )}
+            ));
+          })}
         </tbody>
       </table>
     </div>
@@ -249,11 +284,7 @@ function PackagesPanel({ repoId }: { repoId: string }) {
                   {pkg.path && <p class="text-xs text-neutral-500 mt-0.5">{pkg.path}</p>}
                 </div>
                 <div class="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleExpand(pkg.id)}
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => handleExpand(pkg.id)}>
                     {expandedId === pkg.id ? "Hide" : "Show history"}
                   </Button>
                   <Button
@@ -266,7 +297,13 @@ function PackagesPanel({ repoId }: { repoId: string }) {
                     }}
                     title="Delete package"
                   >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={2}>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width={2}
+                    >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"

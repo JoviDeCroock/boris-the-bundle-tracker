@@ -18,11 +18,11 @@ For each pull request the action:
 
 ## Prerequisites
 
-| Requirement | Notes |
-|---|---|
+| Requirement                       | Notes                                                    |
+| --------------------------------- | -------------------------------------------------------- |
 | Boris account + repository linked | Create at [boris.example.com](https://boris.example.com) |
-| API key | Created from the repository detail page in Boris |
-| `npm run build` (or equivalent) | Must produce output files matching the `exports` map |
+| API key                           | Created from the repository detail page in Boris         |
+| `npm run build` (or equivalent)   | Must produce output files matching the `exports` map     |
 
 ---
 
@@ -48,7 +48,7 @@ name: Boris Bundle Tracker
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
 
 jobs:
   bundle-size:
@@ -58,12 +58,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # needed to check out the base branch later
+          fetch-depth: 0 # needed to check out the base branch later
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -87,14 +87,14 @@ That's it. On the next pull request, Boris will record the bundle-size diff.
 
 ## Action inputs
 
-| Input | Required | Default | Description |
-|---|---|---|---|
-| `api-key` | yes | — | Boris API key (`bbt_…`) |
-| `api-url` | no | `https://api.example.com` | Boris API base URL |
-| `base-branch` | no | `main` | Branch to compare against |
-| `working-directory` | no | `.` | Root of the npm workspace |
-| `build-command` | no | `npm run build` | Command to build the packages |
-| `install-command` | no | `npm ci` | Command to install dependencies |
+| Input               | Required | Default                   | Description                     |
+| ------------------- | -------- | ------------------------- | ------------------------------- |
+| `api-key`           | yes      | —                         | Boris API key (`bbt_…`)         |
+| `api-url`           | no       | `https://api.example.com` | Boris API base URL              |
+| `base-branch`       | no       | `main`                    | Branch to compare against       |
+| `working-directory` | no       | `.`                       | Root of the npm workspace       |
+| `build-command`     | no       | `npm run build`           | Command to build the packages   |
+| `install-command`   | no       | `npm ci`                  | Command to install dependencies |
 
 ---
 
@@ -165,6 +165,8 @@ The action sends a JSON payload to `POST /api/report`:
   "prTitle": "feat: add dark mode",
   "branch": "feat/dark-mode",
   "commitSha": "abc1234",
+  "prMerged": false,
+  "prState": "open",
   "packages": [
     {
       "name": "@acme/ui",
@@ -174,7 +176,7 @@ The action sends a JSON payload to `POST /api/report`:
           "exportPath": ".",
           "files": [
             { "file": "dist/index.mjs", "mainSize": 9600, "prSize": 10100 },
-            { "file": "dist/index.js",  "mainSize": 10240, "prSize": 10850 }
+            { "file": "dist/index.js", "mainSize": 10240, "prSize": 10850 }
           ]
         }
       ]
@@ -190,13 +192,17 @@ See [api.md](./api.md#bundle-size-report) for the full API reference.
 ## Troubleshooting
 
 ### "Invalid API key"
+
 Verify that the `BORIS_API_KEY` secret matches the key displayed in the Boris dashboard for this repository. Keys cannot be retrieved after creation; if lost, delete and recreate.
 
 ### "API key does not belong to this repository"
+
 The API key is scoped to the repository you created it for. Make sure the `repository` field in the report payload (`owner/name`) exactly matches the repository linked in Boris.
 
 ### Build fails on base branch
+
 If the base branch requires different build steps, set `build-command` to a more general command, or add a `.boris-build.sh` script at the repository root that the action will use if present.
 
 ### No files discovered
+
 Ensure `package.json` has an `exports` field and that the build command produces the referenced output files.

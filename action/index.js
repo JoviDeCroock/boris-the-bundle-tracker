@@ -1,52 +1,52 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { execSync } = require('node:child_process');
+const fs = require("node:fs");
+const path = require("node:path");
+const { execSync } = require("node:child_process");
 
-function getInput(name, fallback = '') {
-  const key = `INPUT_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
+function getInput(name, fallback = "") {
+  const key = `INPUT_${name.replace(/ /g, "_").replace(/-/g, "_").toUpperCase()}`;
   return (process.env[key] || fallback).trim();
 }
 
 function run(cmd, cwd) {
   console.log(`$ ${cmd}`);
-  execSync(cmd, { cwd, stdio: 'inherit', env: process.env });
+  execSync(cmd, { cwd, stdio: "inherit", env: process.env });
 }
 
 function readJson(file) {
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
 function isObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function globToRegExp(glob) {
   const escaped = glob
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '__DOUBLE_STAR__')
-    .replace(/\*/g, '[^/]*')
-    .replace(/__DOUBLE_STAR__/g, '.*');
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*\*/g, "__DOUBLE_STAR__")
+    .replace(/\*/g, "[^/]*")
+    .replace(/__DOUBLE_STAR__/g, ".*");
   return new RegExp(`^${escaped}$`);
 }
 
 function loadPnpmWorkspacePatterns(rootDir) {
-  const file = path.join(rootDir, 'pnpm-workspace.yaml');
+  const file = path.join(rootDir, "pnpm-workspace.yaml");
   if (!fs.existsSync(file)) return [];
 
-  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
   const out = [];
   let inPackages = false;
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line || line.startsWith('#')) continue;
-    if (line === 'packages:' || line.startsWith('packages:')) {
+    if (!line || line.startsWith("#")) continue;
+    if (line === "packages:" || line.startsWith("packages:")) {
       inPackages = true;
       continue;
     }
     if (!inPackages) continue;
     const match = line.match(/^\-\s*["']?(.+?)["']?$/);
     if (!match) {
-      if (!line.startsWith('-')) break;
+      if (!line.startsWith("-")) break;
       continue;
     }
     out.push(match[1]);
@@ -61,11 +61,11 @@ function collectPackageJsonFiles(rootDir) {
     const dir = stack.pop();
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.name === '.git' || entry.name === 'node_modules') continue;
+      if (entry.name === ".git" || entry.name === "node_modules") continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         stack.push(full);
-      } else if (entry.isFile() && entry.name === 'package.json') {
+      } else if (entry.isFile() && entry.name === "package.json") {
         results.push(full);
       }
     }
@@ -85,7 +85,7 @@ function collectWorkspacePatterns(rootDir, rootPkg) {
 }
 
 function findPackages(rootDir) {
-  const rootPackageJson = path.join(rootDir, 'package.json');
+  const rootPackageJson = path.join(rootDir, "package.json");
   if (!fs.existsSync(rootPackageJson)) {
     throw new Error(`No package.json found in ${rootDir}`);
   }
@@ -98,9 +98,9 @@ function findPackages(rootDir) {
   const regexes = patterns.map(globToRegExp);
   for (const file of packageFiles) {
     const packageDir = path.dirname(file);
-    const relDir = path.relative(rootDir, packageDir).replace(/\\/g, '/');
+    const relDir = path.relative(rootDir, packageDir).replace(/\\/g, "/");
 
-    const isRoot = relDir === '';
+    const isRoot = relDir === "";
     const inWorkspace = regexes.some((r) => r.test(relDir));
 
     if (isRoot || patterns.length === 0 || inWorkspace) {
@@ -112,8 +112,8 @@ function findPackages(rootDir) {
 }
 
 function collectExportFiles(node, exportPath, out) {
-  if (typeof node === 'string') {
-    if (node.startsWith('./')) out.push({ exportPath, file: node.slice(2) });
+  if (typeof node === "string") {
+    if (node.startsWith("./")) out.push({ exportPath, file: node.slice(2) });
     return;
   }
   if (Array.isArray(node)) {
@@ -130,18 +130,18 @@ function parseExports(exportsField) {
   if (!exportsField) return [];
   const out = [];
 
-  if (typeof exportsField === 'string' || Array.isArray(exportsField)) {
-    collectExportFiles(exportsField, '.', out);
+  if (typeof exportsField === "string" || Array.isArray(exportsField)) {
+    collectExportFiles(exportsField, ".", out);
   } else if (isObject(exportsField)) {
     const keys = Object.keys(exportsField);
-    const explicitExportKeys = keys.filter((k) => k === '.' || k.startsWith('./'));
+    const explicitExportKeys = keys.filter((k) => k === "." || k.startsWith("./"));
 
     if (explicitExportKeys.length > 0) {
       for (const key of explicitExportKeys) {
         collectExportFiles(exportsField[key], key, out);
       }
     } else {
-      collectExportFiles(exportsField, '.', out);
+      collectExportFiles(exportsField, ".", out);
     }
   }
 
@@ -151,7 +151,7 @@ function parseExports(exportsField) {
 }
 
 function resolveBuildCommand(workingDir, defaultBuild) {
-  const script = path.join(workingDir, '.boris-build.sh');
+  const script = path.join(workingDir, ".boris-build.sh");
   if (fs.existsSync(script)) {
     fs.chmodSync(script, 0o755);
     return `bash ${JSON.stringify(script)}`;
@@ -172,7 +172,9 @@ function collectSnapshot(rootDir) {
       if (fs.existsSync(filePath)) {
         size = fs.statSync(filePath).size;
       } else {
-        console.warn(`::warning::Missing output file for ${entry.pkg.name || entry.relDir || '.'}: ${exp.file}`);
+        console.warn(
+          `::warning::Missing output file for ${entry.pkg.name || entry.relDir || "."}: ${exp.file}`,
+        );
       }
 
       if (!exportGroups.has(exp.exportPath)) exportGroups.set(exp.exportPath, []);
@@ -194,7 +196,7 @@ function flattenByPackage(snapshot, label) {
   for (const pkg of snapshot) {
     for (const exp of pkg.exports) {
       for (const file of exp.files) {
-        const key = [pkg.name, pkg.path || '', exp.exportPath, file.file].join('::');
+        const key = [pkg.name, pkg.path || "", exp.exportPath, file.file].join("::");
         const existing = map.get(key) || {
           packageName: pkg.name,
           packagePath: pkg.path,
@@ -212,8 +214,8 @@ function flattenByPackage(snapshot, label) {
 }
 
 function mergeSnapshots(mainSnapshot, prSnapshot) {
-  const mainMap = flattenByPackage(mainSnapshot, 'mainSize');
-  const prMap = flattenByPackage(prSnapshot, 'prSize');
+  const mainMap = flattenByPackage(mainSnapshot, "mainSize");
+  const prMap = flattenByPackage(prSnapshot, "prSize");
 
   const merged = new Map(mainMap);
   for (const [key, value] of prMap.entries()) {
@@ -227,7 +229,7 @@ function mergeSnapshots(mainSnapshot, prSnapshot) {
 
   const packageMap = new Map();
   for (const value of merged.values()) {
-    const pkgKey = `${value.packageName}::${value.packagePath || ''}`;
+    const pkgKey = `${value.packageName}::${value.packagePath || ""}`;
     if (!packageMap.has(pkgKey)) {
       packageMap.set(pkgKey, {
         name: value.packageName,
@@ -258,44 +260,54 @@ function setOutput(name, value) {
 }
 
 async function main() {
-  const apiKey = getInput('api-key');
-  const apiUrl = getInput('api-url', 'https://api.example.com');
-  const baseBranchInput = getInput('base-branch', 'main');
-  const workingDirectory = path.resolve(getInput('working-directory', '.'));
-  const installCommand = getInput('install-command', 'npm ci');
-  const buildCommand = resolveBuildCommand(workingDirectory, getInput('build-command', 'npm run build'));
+  const apiKey = getInput("api-key");
+  const apiUrl = getInput("api-url", "https://api.example.com");
+  const baseBranchInput = getInput("base-branch", "main");
+  const workingDirectory = path.resolve(getInput("working-directory", "."));
+  const installCommand = getInput("install-command", "npm ci");
+  const buildCommand = resolveBuildCommand(
+    workingDirectory,
+    getInput("build-command", "npm run build"),
+  );
 
-  if (!apiKey) throw new Error('Missing required input: api-key');
+  if (!apiKey) throw new Error("Missing required input: api-key");
 
   const eventName = process.env.GITHUB_EVENT_NAME;
-  if (eventName !== 'pull_request') {
-    throw new Error(`This action only supports pull_request events (received: ${eventName || 'unknown'})`);
+  if (eventName !== "pull_request") {
+    throw new Error(
+      `This action only supports pull_request events (received: ${eventName || "unknown"})`,
+    );
   }
 
   const eventPath = process.env.GITHUB_EVENT_PATH;
   if (!eventPath || !fs.existsSync(eventPath)) {
-    throw new Error('GITHUB_EVENT_PATH is not available');
+    throw new Error("GITHUB_EVENT_PATH is not available");
   }
   const event = readJson(eventPath);
   const pr = event.pull_request;
-  if (!pr) throw new Error('pull_request payload is missing');
+  if (!pr) throw new Error("pull_request payload is missing");
 
   const repository = process.env.GITHUB_REPOSITORY;
   const prNumber = pr.number;
   const prTitle = pr.title;
   const branch = pr.head?.ref;
   const commitSha = pr.head?.sha;
+  const prMerged = Boolean(pr.merged);
+  const prState = pr.state === "closed" ? "closed" : "open";
   const baseBranch = pr.base?.ref || baseBranchInput;
 
   if (!repository || !prNumber || !branch || !commitSha) {
-    throw new Error('Missing required GitHub metadata');
+    throw new Error("Missing required GitHub metadata");
   }
 
   run(installCommand, workingDirectory);
   run(buildCommand, workingDirectory);
   const prSnapshot = collectSnapshot(workingDirectory);
 
-  const startingSha = execSync('git rev-parse HEAD', { cwd: workingDirectory, encoding: 'utf8' }).trim();
+  const startingSha = execSync("git rev-parse HEAD", {
+    cwd: workingDirectory,
+    encoding: "utf8",
+  }).trim();
 
   try {
     run(`git fetch --no-tags origin ${baseBranch}`, workingDirectory);
@@ -314,15 +326,17 @@ async function main() {
     prTitle,
     branch,
     commitSha,
+    prMerged,
+    prState,
     packages: mergeSnapshots(mainSnapshot, prSnapshot),
   };
 
-  const endpoint = `${apiUrl.replace(/\/$/, '')}/api/report`;
+  const endpoint = `${apiUrl.replace(/\/$/, "")}/api/report`;
   const response = await fetch(endpoint, {
-    method: 'POST',
+    method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
@@ -340,7 +354,7 @@ async function main() {
   }
 
   const records = Number(parsed.recordsCreated || 0);
-  setOutput('records-created', records);
+  setOutput("records-created", records);
   console.log(`Reported bundle sizes to Boris (${records} records).`);
 }
 

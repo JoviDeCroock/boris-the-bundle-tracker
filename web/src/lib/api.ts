@@ -105,6 +105,8 @@ export interface PackageEvolution {
   prTitle: string | null;
   branch: string;
   commitSha: string;
+  prMerged: boolean;
+  prState: "open" | "closed";
   exportPath: string;
   fileName: string;
   mainSize: number;
