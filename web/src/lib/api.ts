@@ -145,3 +145,9 @@ export async function updateEvolution(
     body: JSON.stringify(data),
   });
 }
+
+export async function deleteEvolution(repoId: string, packageId: string, prNumber: number): Promise<void> {
+  await fetchApi(`/api/v1/repositories/${repoId}/packages/${packageId}/evolutions/${prNumber}`, {
+    method: "DELETE",
+  });
+}

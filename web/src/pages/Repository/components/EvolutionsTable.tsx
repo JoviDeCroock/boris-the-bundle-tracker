@@ -1,8 +1,8 @@
-import { useMemo } from "preact/hooks";
+import { useEffect, useMemo } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../../components/ui/Button";
-import { updateEvolution } from "../../../lib/api";
+import { deleteEvolution, updateEvolution } from "../../../lib/api";
 import type { PackageEvolution, Repository } from "../../../lib/api";
 import { diffBadge, SizeCell } from "./sizeUtils";
 
@@ -35,6 +35,8 @@ export function EvolutionsTable({ evolutions, repository, repoId, packageId }: E
 
   const queryClient = useQueryClient();
   const updatingPr = useSignal<number | null>(null);
+  const deletingPr = useSignal<number | null>(null);
+  const openMenuPr = useSignal<number | null>(null);
   const markMergedMutation = useMutation({
     mutationFn: (prNumber: number) => updateEvolution(repoId, packageId, prNumber, { prMerged: true }),
     onSuccess: () => {
@@ -43,8 +45,17 @@ export function EvolutionsTable({ evolutions, repository, repoId, packageId }: E
       });
     },
   });
+  const deleteEvolutionMutation = useMutation({
+    mutationFn: (prNumber: number) => deleteEvolution(repoId, packageId, prNumber),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["repositories", repoId, "packages", packageId, "evolutions"],
+      });
+    },
+  });
 
   async function handleMarkMerged(prNumber: number) {
+    openMenuPr.value = null;
     updatingPr.value = prNumber;
     try {
       await markMergedMutation.mutateAsync(prNumber);
@@ -55,6 +66,36 @@ export function EvolutionsTable({ evolutions, repository, repoId, packageId }: E
       updatingPr.value = null;
     }
   }
+
+  async function handleDeleteEvolution(prNumber: number) {
+    if (!confirm(`Delete all evolution entries for PR #${prNumber}?`)) return;
+
+    openMenuPr.value = null;
+    deletingPr.value = prNumber;
+    try {
+      await deleteEvolutionMutation.mutateAsync(prNumber);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete PR history");
+    } finally {
+      deletingPr.value = null;
+    }
+  }
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (!target.closest("[data-pr-actions-menu]")) {
+        openMenuPr.value = null;
+      }
+    };
+
+    document.addEventListener("click", handleDocumentClick);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+    };
+  }, []);
 
   if (byPr.size === 0) {
     return (
@@ -127,18 +168,42 @@ export function EvolutionsTable({ evolutions, repository, repoId, packageId }: E
                             open
                           </span>
                         )}
-                        {!latestEntry.prMerged && latestEntry.prState !== "closed" && (
-                          <Button
+                        <div class="relative" data-pr-actions-menu>
+                          <button
                             type="button"
-                            variant="secondary"
-                            size="sm"
-                            class="px-2.5 py-0 text-[10px] font-mono border border-emerald-500/25 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
-                            onClick={() => handleMarkMerged(prNumber)}
-                            disabled={updatingPr.value === prNumber}
+                            class="cursor-pointer select-none rounded px-2 py-0.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/70 font-mono text-xs"
+                            onClick={() => {
+                              openMenuPr.value = openMenuPr.value === prNumber ? null : prNumber;
+                            }}
+                            aria-label={`Open actions for PR #${prNumber}`}
                           >
-                            {updatingPr.value === prNumber ? "Marking…" : "Merged"}
-                          </Button>
-                        )}
+                            ...
+                          </button>
+                          {openMenuPr.value === prNumber && (
+                            <div class="absolute top-6 right-0 z-10 min-w-[10rem] rounded border border-neutral-700 bg-neutral-950/95 p-1.5 shadow-xl backdrop-blur">
+                            {!latestEntry.prMerged && latestEntry.prState !== "closed" && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                class="w-full px-2 py-1 text-left font-mono text-[11px] text-emerald-300 hover:bg-emerald-500/10"
+                                onClick={() => handleMarkMerged(prNumber)}
+                                disabled={updatingPr.value === prNumber || deletingPr.value === prNumber}
+                              >
+                                {updatingPr.value === prNumber ? "Marking as merged..." : "Mark as merged"}
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              class="w-full px-2 py-1 text-left font-mono text-[11px] text-rose-300 hover:bg-rose-500/10"
+                              onClick={() => handleDeleteEvolution(prNumber)}
+                              disabled={deletingPr.value === prNumber || updatingPr.value === prNumber}
+                            >
+                              {deletingPr.value === prNumber ? "Deleting..." : "Delete PR history"}
+                            </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </>
