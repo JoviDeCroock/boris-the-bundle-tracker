@@ -31,7 +31,6 @@ export function Home() {
       <Hero onGetStarted={() => route("/dashboard")} />
       <Features />
       <HowItWorks />
-      <Pricing onGetStarted={() => route("/dashboard")} />
       <FAQ />
     </>
   );
@@ -90,11 +89,9 @@ function Hero({ onGetStarted }: { onGetStarted: () => void }) {
             </div>
 
             <div class="anim-4 flex items-center gap-6 mt-10 text-xs text-neutral-600 font-mono">
-              <span>3 repos free</span>
+              <span>GitHub Action native</span>
               <span class="w-px h-3 bg-neutral-800" />
               <span>no credit card needed</span>
-              <span class="w-px h-3 bg-neutral-800" />
-              <span>GitHub Action native</span>
             </div>
           </div>
 
@@ -227,7 +224,7 @@ function Features() {
         </svg>
       ),
       title: "Free to start",
-      desc: "Track three repositories at no cost, no credit card. Upgrade to Pro only when your team outgrows it.",
+      desc: "Get started at no cost, no credit card required. Track your bundle sizes from day one.",
     },
   ];
 
@@ -269,7 +266,7 @@ function HowItWorks() {
     {
       num: "01",
       title: "Link your repository",
-      desc: "Connect any GitHub repository from your Boris dashboard. Free plan includes up to 3 repos.",
+      desc: "Connect any GitHub repository from your Boris dashboard.",
       detail: "Dashboard → Add repository → owner/repo",
     },
     {
@@ -319,86 +316,6 @@ function HowItWorks() {
   );
 }
 
-function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
-  return (
-    <section id="pricing" class="py-28 px-6 bg-neutral-950">
-      <div class="max-w-6xl mx-auto">
-        <div class="mb-16">
-          <p class="font-mono text-xs text-orange-500 tracking-widest uppercase mb-3">Pricing</p>
-          <h2 class="text-4xl md:text-5xl font-bold text-white leading-tight">
-            Simple, honest
-            <br />
-            pricing.
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
-          {/* Free */}
-          <div class="rounded-2xl border border-neutral-800 p-8 flex flex-col" style="background: #111113;">
-            <div class="mb-6">
-              <h3 class="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">Free</h3>
-              <p class="text-5xl font-bold text-white">
-                $0<span class="text-lg font-normal text-neutral-600">/mo</span>
-              </p>
-            </div>
-            <ul class="space-y-3 mb-8 flex-1">
-              {["3 repositories", "2 API keys per repo", "30 days of history", "GitHub Action support", "Community support"].map((f) => (
-                <li key={f} class="flex items-center gap-2.5 text-sm text-neutral-400">
-                  <svg class="w-4 h-4 text-neutral-600 shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm3.78 6.237l-4 4.5a.75.75 0 01-1.105.026l-2-2a.75.75 0 111.06-1.06l1.44 1.44 3.47-3.908a.75.75 0 011.135.982z" />
-                  </svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={onGetStarted}
-              class="w-full py-3 rounded-lg border border-neutral-700 text-neutral-300 font-medium hover:border-neutral-500 hover:text-white transition-colors text-sm"
-            >
-              Get started free
-            </button>
-          </div>
-
-          {/* Pro */}
-          <div
-            class="rounded-2xl p-8 flex flex-col relative"
-            style="background: #111113; border: 1px solid rgba(249,115,22,0.3); box-shadow: 0 0 40px rgba(249,115,22,0.06);"
-          >
-            <div
-              class="absolute -top-3 left-6 font-mono text-xs px-3 py-1 rounded-full font-semibold"
-              style="background: #f97316; color: #431407;"
-            >
-              Pro
-            </div>
-            <div class="mb-6">
-              <h3 class="text-xs font-mono text-orange-500/70 uppercase tracking-widest mb-3">Pro</h3>
-              <p class="text-5xl font-bold text-white">
-                $10<span class="text-lg font-normal text-neutral-600">/mo</span>
-              </p>
-            </div>
-            <ul class="space-y-3 mb-8 flex-1">
-              {["50 repositories", "10 API keys per repo", "365 days of history", "GitHub Action support", "Priority support"].map((f) => (
-                <li key={f} class="flex items-center gap-2.5 text-sm text-neutral-300">
-                  <svg class="w-4 h-4 text-orange-500 shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm3.78 6.237l-4 4.5a.75.75 0 01-1.105.026l-2-2a.75.75 0 111.06-1.06l1.44 1.44 3.47-3.908a.75.75 0 011.135.982z" />
-                  </svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={onGetStarted}
-              class="w-full py-3 rounded-lg font-semibold text-white text-sm transition-all hover:scale-[1.01] active:scale-[0.99]"
-              style="background: #f97316; box-shadow: 0 0 20px rgba(249,115,22,0.25);"
-            >
-              Upgrade to Pro
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function FAQ() {
   const items = [
@@ -415,16 +332,8 @@ function FAQ() {
       a: "A package maps to one entry in your build (e.g. a directory in a monorepo). You can track multiple packages per repository — each gets its own evolution history.",
     },
     {
-      q: "How does billing work?",
-      a: "Billing is handled through Polar. You can upgrade, downgrade, or cancel at any time from the billing page. Upgrades take effect immediately.",
-    },
-    {
       q: "Can I use Boris with non-GitHub repos?",
       a: "The dashboard and API are Git-host agnostic, but the official action is built for GitHub Actions. GitLab CI / Bitbucket Pipelines support is on the roadmap.",
-    },
-    {
-      q: "What does 'history' mean in the plan limits?",
-      a: "History is the number of days Boris retains your PR evolution data. Free plan keeps 30 days; Pro keeps a full year, so you can see seasonal trends and long-term drift.",
     },
   ];
 

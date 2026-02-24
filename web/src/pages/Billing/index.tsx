@@ -78,17 +78,6 @@ export function Billing() {
                     </span>
                   )}
                 </div>
-                <p class="text-sm text-neutral-600">
-                  {billing.isPro.value
-                    ? "50 repos · 10 API keys/repo · 365 days history"
-                    : "3 repos · 2 API keys/repo · 30 days history"}
-                </p>
-              </div>
-              <div class="text-right shrink-0 ml-4">
-                <p class="text-2xl font-bold text-white">
-                  {billing.isPro.value ? "$10" : "$0"}
-                </p>
-                <p class="font-mono text-xs text-neutral-600">/month</p>
               </div>
             </div>
           </div>
@@ -108,7 +97,7 @@ export function Billing() {
                 <div>
                   <p class="text-sm text-white font-medium mb-1">Upgrade to Pro</p>
                   <p class="text-xs text-neutral-600">
-                    Unlock 50 repos, 365 days history, and priority support.
+                    Unlock more repositories and priority support.
                   </p>
                 </div>
                 <Button
@@ -124,34 +113,6 @@ export function Billing() {
           </div>
         </div>
 
-        {/* Plan comparison */}
-        <div class="mt-6 rounded-xl border border-neutral-800/60 overflow-hidden" style="background: #111113;">
-          <div class="px-5 py-4 border-b border-neutral-800/60">
-            <h3 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">Plan limits</h3>
-          </div>
-          <div class="divide-y divide-neutral-800/40">
-            {[
-              { label: "Repositories", free: "3", pro: "50" },
-              { label: "API keys per repo", free: "2", pro: "10" },
-              { label: "History retention", free: "30 days", pro: "365 days" },
-            ].map((row) => (
-              <div key={row.label} class="grid grid-cols-3 px-5 py-3 text-sm">
-                <span class="text-neutral-500">{row.label}</span>
-                <span class={`font-mono text-xs text-center ${!billing.isPro.value ? "text-white" : "text-neutral-600"}`}>
-                  {row.free}
-                </span>
-                <span class={`font-mono text-xs text-center ${billing.isPro.value ? "text-orange-400" : "text-neutral-600"}`}>
-                  {row.pro}
-                </span>
-              </div>
-            ))}
-            <div class="grid grid-cols-3 px-5 py-2 text-xs font-mono text-neutral-700">
-              <span />
-              <span class="text-center">Free</span>
-              <span class="text-center text-orange-600">Pro</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
