@@ -7,6 +7,7 @@ import {
   useLocation,
   lazy,
 } from "preact-iso";
+import { createDispatcher, HoofdProvider } from "hoofd/preact";
 
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -61,5 +62,24 @@ if (typeof window !== "undefined") {
 }
 
 export async function prerender(data) {
-  return await ssr(<App {...data} />);
+  const dispatcher = createDispatcher();
+  const result = await ssr(
+    <HoofdProvider value={dispatcher}>
+      <App {...data} />
+    </HoofdProvider>,
+  );
+
+  const { title, lang, metas, links } = dispatcher.toStatic();
+
+  return {
+    ...result,
+    head: {
+      lang,
+      title,
+      elements: new Set([
+        ...metas.map((meta) => ({ type: "meta", props: meta })),
+        ...links.map((link) => ({ type: "link", props: link })),
+      ]),
+    },
+  };
 }
