@@ -299,7 +299,7 @@ export function BundleSizeChart({ evolutions }: Props) {
           {tooltip &&
             (() => {
               const TW = 180;
-              const TH = tooltip.value.prTitle ? 44 : 30;
+              const TH = tooltip.value?.prTitle ? 44 : 30;
               const tx = Math.min(tooltip.value.x + 10, W - TW - 4);
               const ty = Math.max(tooltip.value.y - TH - 8, 4);
               return (
@@ -324,7 +324,7 @@ export function BundleSizeChart({ evolutions }: Props) {
                   >
                     #{tooltip.value.prNumber} · {formatBytes(tooltip.value.size)}
                   </text>
-                  {tooltip.value.prTitle && (
+                  {tooltip.value?.prTitle && (
                     <text
                       x={tx + 8}
                       y={ty + 29}
