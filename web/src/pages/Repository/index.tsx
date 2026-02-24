@@ -6,6 +6,7 @@ import { RepositoriesModel } from "../../models/repositories";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import type { Repository, PackageEvolution } from "../../lib/api";
+import { BundleSizeChart } from "../../components/BundleSizeChart";
 
 // ── Utility helpers ───────────────────────────────────────────────────────────
 
@@ -352,16 +353,27 @@ function PackagesPanel({ repoId, repository }: { repoId: string; repository: Rep
               </div>
 
               {expandedId === pkg.id && (
-                <div class="pb-4">
-                  <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
-                    {repos.evolutionsLoading.value ? (
+                <div class="pb-4 space-y-3">
+                  {repos.evolutionsLoading.value ? (
+                    <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
                       <p class="font-mono text-xs text-neutral-600">Loading history…</p>
-                    ) : repos.evolutionsError.value ? (
+                    </div>
+                  ) : repos.evolutionsError.value ? (
+                    <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
                       <p class="font-mono text-xs text-red-400">{repos.evolutionsError.value}</p>
-                    ) : (
-                      <EvolutionsTable evolutions={repos.evolutions.value} repository={repository} />
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <>
+                      {repos.evolutions.value.some((ev) => ev.prMerged) && (
+                        <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                          <BundleSizeChart evolutions={repos.evolutions.value} />
+                        </div>
+                      )}
+                      <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                        <EvolutionsTable evolutions={repos.evolutions.value} repository={repository} />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </li>
