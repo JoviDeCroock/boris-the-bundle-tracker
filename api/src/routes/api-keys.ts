@@ -1,10 +1,9 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Bindings, Variables } from "../types";
-import { getUserPlan, PLAN_LIMITS } from "../lib/plans";
 
 export const apiKeys = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -93,24 +92,6 @@ apiKeys.post("/:repoId/api-keys", async (c) => {
   const name = body.name?.trim();
   if (!name) {
     return c.json({ error: "name is required" }, 400);
-  }
-
-  // Enforce plan API key limit per repository
-  const plan = await getUserPlan(db, userId);
-  const limit = PLAN_LIMITS[plan].apiKeysPerRepo;
-  const countResult = await db
-    .select({ count: count() })
-    .from(schema.apiKey)
-    .where(eq(schema.apiKey.repositoryId, repoId))
-    .get();
-  const keyCount = countResult?.count ?? 0;
-  if (keyCount >= limit) {
-    return c.json(
-      {
-        error: `API key limit reached. Your ${plan} plan allows up to ${limit} keys per repository. Upgrade to add more.`,
-      },
-      403,
-    );
   }
 
   const rawKey = generateKey();
