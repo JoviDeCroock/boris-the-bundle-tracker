@@ -20,7 +20,7 @@
     }
   ],
   "vars": {
-    "BETTER_AUTH_URL": "https://boris.resynapse.dev",
+    "BETTER_AUTH_URL": "https://boris-api.resynapse.dev",
     "LOCAL": "false",
   },
   "d1_databases": [
