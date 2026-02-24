@@ -230,6 +230,7 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
   const newKeyName= useSignal("");
   const createError = useSignal<string | null>(null);
   const newKeyValue = useSignal<string | null>(null);
+  const copyStatus = useSignal<string | null>(null);
 
   const apiKeysQuery = useQuery({
     queryKey: ["repositories", repoId, "api-keys"],
@@ -264,6 +265,19 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
     }
   }
 
+  async function handleCopyNewKey() {
+    if (!newKeyValue.value) return;
+    try {
+      await navigator.clipboard.writeText(newKeyValue.value);
+      copyStatus.value = "Copied";
+      window.setTimeout(() => {
+        if (copyStatus.value === "Copied") copyStatus.value = null;
+      }, 1500);
+    } catch {
+      copyStatus.value = "Copy failed";
+    }
+  }
+
   return (
     <section
       class="rounded-xl border border-neutral-800 overflow-hidden"
@@ -289,12 +303,25 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
             <code class="block text-xs text-emerald-300 break-all font-mono leading-relaxed">
               {newKeyValue.value}
             </code>
-            <button
-              class="mt-3 font-mono text-xs text-emerald-600 hover:text-emerald-400 transition-colors"
-              onClick={() => (newKeyValue.value = null)}
-            >
-              Dismiss ×
-            </button>
+            <div class="mt-3 flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleCopyNewKey}
+                class="border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
+              >
+                Copy API key
+              </Button>
+              {copyStatus.value && (
+                <span class="font-mono text-[11px] text-emerald-400">{copyStatus.value}</span>
+              )}
+              <button
+                class="font-mono text-xs text-emerald-600 hover:text-emerald-400 transition-colors"
+                onClick={() => (newKeyValue.value = null)}
+              >
+                Dismiss ×
+              </button>
+            </div>
           </div>
         )}
 
@@ -455,7 +482,7 @@ function EvolutionsTable({
               : `#${prNumber}`;
 
             return entries.map((ev, i) => (
-              <tr key={ev.id} class="hover:bg-white/[0.015] transition-colors">
+              <tr key={ev.id}>
                 {i === 0 && (
                   <>
                     <td class="py-2.5 pr-4 align-top" rowSpan={entries.length}>
@@ -489,14 +516,16 @@ function EvolutionsTable({
                           </span>
                         )}
                         {!latestEntry.prMerged && latestEntry.prState !== "closed" && (
-                          <button
+                          <Button
                             type="button"
-                            class="text-[10px] text-neutral-600 hover:text-emerald-500 transition-colors"
+                            variant="secondary"
+                            size="sm"
+                            class="h-6 px-2.5 py-0 text-[10px] font-mono border border-emerald-500/25 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
                             onClick={() => handleMarkMerged(prNumber)}
                             disabled={updatingPr.value === prNumber}
                           >
-                            {updatingPr.value === prNumber ? "..." : "mark merged"}
-                          </button>
+                            {updatingPr.value === prNumber ? "Marking…" : "Mark PR as merged"}
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -524,9 +553,11 @@ function EvolutionsTable({
 function PackagesPanel({
   repoId,
   repository,
+  onPackageCountChange,
 }: {
   repoId: string;
   repository: Repository | undefined;
+  onPackageCountChange?: (count: number) => void;
 }) {
   const queryClient = useQueryClient();
   const expandedId = useSignal<string | null>(null);
@@ -549,6 +580,10 @@ function PackagesPanel({
       queryClient.invalidateQueries({ queryKey: ["repositories", repoId, "packages"] });
     },
   });
+
+  useEffect(() => {
+    onPackageCountChange?.((packagesQuery.data ?? []).length);
+  }, [packagesQuery.data, onPackageCountChange]);
 
   function handleExpand(packageId: string) {
     if (expandedId.value === packageId) {
@@ -681,6 +716,9 @@ export function RepositoryPage() {
   const { params } = useRoute();
   const auth = useModel(AuthModel);
   const actionFilesModalOpen = useSignal(false);
+  const setupExpanded = useSignal(true);
+  const setupAutoCollapsed = useSignal(false);
+  const packageCount = useSignal(0);
 
   const repoId = params.id as string;
 
@@ -701,6 +739,14 @@ export function RepositoryPage() {
       }
     });
   }, []);
+
+  function handlePackageCountChange(count: number) {
+    packageCount.value = count;
+    if (count > 0 && !setupAutoCollapsed.value) {
+      setupExpanded.value = false;
+      setupAutoCollapsed.value = true;
+    }
+  }
 
   if (auth.loading.value || repositoriesQuery.isLoading) {
     return (
@@ -731,7 +777,11 @@ export function RepositoryPage() {
           </span>
         </div>
 
-        <PackagesPanel repoId={repoId} repository={repository} />
+        <PackagesPanel
+          repoId={repoId}
+          repository={repository}
+          onPackageCountChange={handlePackageCountChange}
+        />
         <ApiKeysPanel repoId={repoId} />
 
         {/* Setup instructions */}
@@ -752,15 +802,29 @@ export function RepositoryPage() {
                 .
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => (actionFilesModalOpen.value = true)}
-            >
-              Copy action files
-            </Button>
+            <div class="flex items-center gap-2 shrink-0">
+              {packageCount.value > 0 && (
+                <span class="font-mono text-[10px] px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  installed
+                </span>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => (actionFilesModalOpen.value = true)}
+              >
+                Copy action files
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => (setupExpanded.value = !setupExpanded.value)}
+              >
+                {setupExpanded.value ? "Hide" : "Show"}
+              </Button>
+            </div>
           </div>
-          <div class="p-5">
+          {setupExpanded.value && <div class="p-5">
             <p class="font-mono text-xs text-neutral-700 mb-3">
               Add the action files to your repo (button above), then reference the local action in
               your workflow.
@@ -792,11 +856,11 @@ jobs:
         with:
           api-key: \${{ secrets.BORIS_API_KEY }}
           # Optional:
-          # base-branch: main
-          # working-directory: .
-          # install-command: npm ci
-          # build-command: npm run build`}</pre>
-          </div>
+           # base-branch: main
+           # working-directory: .
+           # install-command: npm ci
+           # build-command: npm run build`}</pre>
+          </div>}
         </section>
       </div>
     </div>
