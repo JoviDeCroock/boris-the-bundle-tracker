@@ -18,13 +18,11 @@ inputs:
     required: false
     default: '.'
   build-command:
-    description: 'Command used to build packages'
+    description: 'Command used to build packages (auto-detected from lock files if not set)'
     required: false
-    default: 'npm run build'
   install-command:
-    description: 'Command used to install dependencies'
+    description: 'Command used to install dependencies (auto-detected from lock files if not set)'
     required: false
-    default: 'npm ci'
 outputs:
   records-created:
     description: 'Number of package evolution records created by the API'
