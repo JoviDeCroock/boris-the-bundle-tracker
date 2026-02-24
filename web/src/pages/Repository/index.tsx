@@ -553,11 +553,9 @@ function EvolutionsTable({
 function PackagesPanel({
   repoId,
   repository,
-  onPackageCountChange,
 }: {
   repoId: string;
   repository: Repository | undefined;
-  onPackageCountChange?: (count: number) => void;
 }) {
   const queryClient = useQueryClient();
   const expandedId = useSignal<string | null>(null);
@@ -580,10 +578,6 @@ function PackagesPanel({
       queryClient.invalidateQueries({ queryKey: ["repositories", repoId, "packages"] });
     },
   });
-
-  useEffect(() => {
-    onPackageCountChange?.((packagesQuery.data ?? []).length);
-  }, [packagesQuery.data?.length]);
 
   function handleExpand(packageId: string) {
     if (expandedId.value === packageId) {
@@ -728,6 +722,12 @@ export function RepositoryPage() {
     enabled: auth.authenticated.value,
   });
 
+  const packagesCountQuery = useQuery({
+    queryKey: ["repositories", repoId, "packages"],
+    queryFn: () => listPackages(repoId),
+    enabled: Boolean(repoId),
+  });
+
   const repository: Repository | undefined = (repositoriesQuery.data ?? []).find(
     (r) => r.id === repoId,
   );
@@ -740,7 +740,8 @@ export function RepositoryPage() {
     });
   }, []);
 
-  function handlePackageCountChange(count: number) {
+  useEffect(() => {
+    const count = (packagesCountQuery.data ?? []).length;
     if (packageCount.value !== count) {
       packageCount.value = count;
     }
@@ -748,7 +749,7 @@ export function RepositoryPage() {
       setupExpanded.value = false;
       setupAutoCollapsed.value = true;
     }
-  }
+  }, [packagesCountQuery.data?.length]);
 
   if (auth.loading.value || repositoriesQuery.isLoading) {
     return (
@@ -779,11 +780,7 @@ export function RepositoryPage() {
           </span>
         </div>
 
-        <PackagesPanel
-          repoId={repoId}
-          repository={repository}
-          onPackageCountChange={handlePackageCountChange}
-        />
+        <PackagesPanel repoId={repoId} repository={repository} />
         <ApiKeysPanel repoId={repoId} />
 
         {/* Setup instructions */}
