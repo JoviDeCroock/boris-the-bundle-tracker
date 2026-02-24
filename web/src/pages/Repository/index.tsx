@@ -583,7 +583,7 @@ function PackagesPanel({
 
   useEffect(() => {
     onPackageCountChange?.((packagesQuery.data ?? []).length);
-  }, [packagesQuery.data, onPackageCountChange]);
+  }, [packagesQuery.data?.length]);
 
   function handleExpand(packageId: string) {
     if (expandedId.value === packageId) {
@@ -741,7 +741,9 @@ export function RepositoryPage() {
   }, []);
 
   function handlePackageCountChange(count: number) {
-    packageCount.value = count;
+    if (packageCount.value !== count) {
+      packageCount.value = count;
+    }
     if (count > 0 && !setupAutoCollapsed.value) {
       setupExpanded.value = false;
       setupAutoCollapsed.value = true;
@@ -856,10 +858,10 @@ jobs:
         with:
           api-key: \${{ secrets.BORIS_API_KEY }}
           # Optional:
-           # base-branch: main
-           # working-directory: .
-           # install-command: npm ci
-           # build-command: npm run build`}</pre>
+          # base-branch: main
+          # working-directory: .
+          # install-command: npm ci
+          # build-command: npm run build`}</pre>
           </div>}
         </section>
       </div>
