@@ -40,7 +40,7 @@ function Hero({ onGetStarted }: { onGetStarted: () => void }) {
               bundle sentinel active
             </div>
 
-            <h1 class="anim-1 text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[0.92] tracking-tight text-white mb-6">
+            <h1 class="anim-1 text-[clamp(3rem,6vw,5.5rem)] font-extrabold leading-[1.05] tracking-tight text-white mb-6">
               Bundle sizes
               <br />
               <span style="color: #f97316;">under control.</span>
