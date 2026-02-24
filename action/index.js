@@ -104,7 +104,7 @@ function findPackages(rootDir) {
     const isRoot = relDir === "";
     const inWorkspace = regexes.some((r) => r.test(relDir));
 
-    if (isRoot || patterns.length === 0 || inWorkspace) {
+    if (isRoot || inWorkspace) {
       selected.push({ packageDir, relDir, packageJsonPath: file, pkg: readJson(file) });
     }
   }
@@ -181,6 +181,28 @@ function defaultBuildCommand(pm) {
   return "npm run build";
 }
 
+/**
+ * For packages that don't use the modern `exports` field, fall back to the
+ * legacy `main` and/or `module` fields and treat them as the "." export.
+ */
+function parseMainModuleFiles(pkg) {
+  const out = [];
+  const seen = new Set();
+
+  const addFile = (field) => {
+    if (!field || typeof field !== "string") return;
+    const file = field.startsWith("./") ? field.slice(2) : field;
+    if (!seen.has(file)) {
+      seen.add(file);
+      out.push({ exportPath: ".", file });
+    }
+  };
+
+  addFile(pkg.main);
+  addFile(pkg.module);
+  return out;
+}
+
 function resolveBuildCommand(workingDir, defaultBuild) {
   const script = path.join(workingDir, ".boris-build.sh");
   if (fs.existsSync(script)) {
@@ -207,7 +229,8 @@ function measureFileSizes(filePath) {
 function collectSnapshot(rootDir) {
   const packages = [];
   for (const entry of findPackages(rootDir)) {
-    const exportsList = parseExports(entry.pkg.exports).filter((e) => e.file.endsWith(".js") || e.file.endsWith(".mjs") || e.file.endsWith(".cjs"));
+    let exportsList = parseExports(entry.pkg.exports).filter((e) => e.file.endsWith(".js") || e.file.endsWith(".mjs") || e.file.endsWith(".cjs"));
+    if (!exportsList.length) exportsList = parseMainModuleFiles(entry.pkg);
     if (!exportsList.length) continue;
 
     const exportGroups = new Map();
