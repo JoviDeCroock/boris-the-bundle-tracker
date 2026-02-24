@@ -1,8 +1,30 @@
 import { useSignal } from "@preact/signals";
 import { useLocation } from "preact-iso";
+import { useMeta, useTitle } from "hoofd/preact";
 
 export function Home() {
   const { route } = useLocation();
+
+  useTitle("Boris — Bundle Size Tracker");
+  useMeta({
+    name: "description",
+    content:
+      "Boris watches your JavaScript bundle sizes across every pull request — so bloat is caught before it ships, not after.",
+  });
+  useMeta({ property: "og:type", content: "website" });
+  useMeta({ property: "og:title", content: "Boris — Bundle Size Tracker" });
+  useMeta({
+    property: "og:description",
+    content:
+      "Boris watches your JavaScript bundle sizes across every pull request — so bloat is caught before it ships, not after.",
+  });
+  useMeta({ name: "twitter:card", content: "summary" });
+  useMeta({ name: "twitter:title", content: "Boris — Bundle Size Tracker" });
+  useMeta({
+    name: "twitter:description",
+    content:
+      "Boris watches your JavaScript bundle sizes across every pull request — so bloat is caught before it ships, not after.",
+  });
 
   return (
     <>
