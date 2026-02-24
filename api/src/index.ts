@@ -4,6 +4,10 @@ import { drizzle } from "drizzle-orm/d1";
 import { Polar } from "@polar-sh/sdk";
 import { createAuth } from "./lib/auth";
 import { subscription } from "./routes/subscription";
+import { repositories } from "./routes/repositories";
+import { apiKeys } from "./routes/api-keys";
+import { packages } from "./routes/packages";
+import { report } from "./routes/report";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import * as schema from "./db/schema";
@@ -136,5 +140,13 @@ app.get("/api/v1/me", (c) => {
 
 // Subscription
 app.route("/api/v1/subscription", subscription);
+
+// Repositories & related resources (session-protected via middleware above)
+app.route("/api/v1/repositories", repositories);
+app.route("/api/v1/repositories", apiKeys);
+app.route("/api/v1/repositories", packages);
+
+// Bundle-size report endpoint — authenticated via Bearer API key (not session)
+app.route("/api/report", report);
 
 export default app;

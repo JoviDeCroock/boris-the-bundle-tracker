@@ -12,7 +12,7 @@ export function DashboardHeader() {
   return (
     <header class="fixed top-0 left-0 right-0 z-50 bg-neutral-950 border-b border-neutral-800">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <div class="text-lg sm:text-xl font-bold text-white">Acme</div>
+        <div class="text-lg sm:text-xl font-bold text-white">Boris</div>
         <div class="flex items-center gap-4">
           <a
             href="/dashboard"
