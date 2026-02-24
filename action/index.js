@@ -1,0 +1,350 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const { execSync } = require('node:child_process');
+
+function getInput(name, fallback = '') {
+  const key = `INPUT_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
+  return (process.env[key] || fallback).trim();
+}
+
+function run(cmd, cwd) {
+  console.log(`$ ${cmd}`);
+  execSync(cmd, { cwd, stdio: 'inherit', env: process.env });
+}
+
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function globToRegExp(glob) {
+  const escaped = glob
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*/g, '__DOUBLE_STAR__')
+    .replace(/\*/g, '[^/]*')
+    .replace(/__DOUBLE_STAR__/g, '.*');
+  return new RegExp(`^${escaped}$`);
+}
+
+function loadPnpmWorkspacePatterns(rootDir) {
+  const file = path.join(rootDir, 'pnpm-workspace.yaml');
+  if (!fs.existsSync(file)) return [];
+
+  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+  const out = [];
+  let inPackages = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    if (line === 'packages:' || line.startsWith('packages:')) {
+      inPackages = true;
+      continue;
+    }
+    if (!inPackages) continue;
+    const match = line.match(/^\-\s*["']?(.+?)["']?$/);
+    if (!match) {
+      if (!line.startsWith('-')) break;
+      continue;
+    }
+    out.push(match[1]);
+  }
+  return out;
+}
+
+function collectPackageJsonFiles(rootDir) {
+  const results = [];
+  const stack = [rootDir];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === '.git' || entry.name === 'node_modules') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(full);
+      } else if (entry.isFile() && entry.name === 'package.json') {
+        results.push(full);
+      }
+    }
+  }
+  return results;
+}
+
+function collectWorkspacePatterns(rootDir, rootPkg) {
+  const patterns = [];
+  if (Array.isArray(rootPkg.workspaces)) patterns.push(...rootPkg.workspaces);
+  if (isObject(rootPkg.workspaces) && Array.isArray(rootPkg.workspaces.packages)) {
+    patterns.push(...rootPkg.workspaces.packages);
+  }
+  if (Array.isArray(rootPkg.packages)) patterns.push(...rootPkg.packages);
+  patterns.push(...loadPnpmWorkspacePatterns(rootDir));
+  return [...new Set(patterns)];
+}
+
+function findPackages(rootDir) {
+  const rootPackageJson = path.join(rootDir, 'package.json');
+  if (!fs.existsSync(rootPackageJson)) {
+    throw new Error(`No package.json found in ${rootDir}`);
+  }
+
+  const rootPkg = readJson(rootPackageJson);
+  const patterns = collectWorkspacePatterns(rootDir, rootPkg);
+  const packageFiles = collectPackageJsonFiles(rootDir);
+
+  const selected = [];
+  const regexes = patterns.map(globToRegExp);
+  for (const file of packageFiles) {
+    const packageDir = path.dirname(file);
+    const relDir = path.relative(rootDir, packageDir).replace(/\\/g, '/');
+
+    const isRoot = relDir === '';
+    const inWorkspace = regexes.some((r) => r.test(relDir));
+
+    if (isRoot || patterns.length === 0 || inWorkspace) {
+      selected.push({ packageDir, relDir, packageJsonPath: file, pkg: readJson(file) });
+    }
+  }
+
+  return selected;
+}
+
+function collectExportFiles(node, exportPath, out) {
+  if (typeof node === 'string') {
+    if (node.startsWith('./')) out.push({ exportPath, file: node.slice(2) });
+    return;
+  }
+  if (Array.isArray(node)) {
+    for (const item of node) collectExportFiles(item, exportPath, out);
+    return;
+  }
+  if (!isObject(node)) return;
+  for (const value of Object.values(node)) {
+    collectExportFiles(value, exportPath, out);
+  }
+}
+
+function parseExports(exportsField) {
+  if (!exportsField) return [];
+  const out = [];
+
+  if (typeof exportsField === 'string' || Array.isArray(exportsField)) {
+    collectExportFiles(exportsField, '.', out);
+  } else if (isObject(exportsField)) {
+    const keys = Object.keys(exportsField);
+    const explicitExportKeys = keys.filter((k) => k === '.' || k.startsWith('./'));
+
+    if (explicitExportKeys.length > 0) {
+      for (const key of explicitExportKeys) {
+        collectExportFiles(exportsField[key], key, out);
+      }
+    } else {
+      collectExportFiles(exportsField, '.', out);
+    }
+  }
+
+  const uniq = new Map();
+  for (const item of out) uniq.set(`${item.exportPath}::${item.file}`, item);
+  return [...uniq.values()];
+}
+
+function resolveBuildCommand(workingDir, defaultBuild) {
+  const script = path.join(workingDir, '.boris-build.sh');
+  if (fs.existsSync(script)) {
+    fs.chmodSync(script, 0o755);
+    return `bash ${JSON.stringify(script)}`;
+  }
+  return defaultBuild;
+}
+
+function collectSnapshot(rootDir) {
+  const packages = [];
+  for (const entry of findPackages(rootDir)) {
+    const exportsList = parseExports(entry.pkg.exports);
+    if (!exportsList.length) continue;
+
+    const exportGroups = new Map();
+    for (const exp of exportsList) {
+      const filePath = path.join(entry.packageDir, exp.file);
+      let size = 0;
+      if (fs.existsSync(filePath)) {
+        size = fs.statSync(filePath).size;
+      } else {
+        console.warn(`::warning::Missing output file for ${entry.pkg.name || entry.relDir || '.'}: ${exp.file}`);
+      }
+
+      if (!exportGroups.has(exp.exportPath)) exportGroups.set(exp.exportPath, []);
+      exportGroups.get(exp.exportPath).push({ file: exp.file, size });
+    }
+
+    packages.push({
+      name: entry.pkg.name || path.basename(entry.packageDir),
+      path: entry.relDir || undefined,
+      exports: [...exportGroups.entries()].map(([exportPath, files]) => ({ exportPath, files })),
+    });
+  }
+
+  return packages;
+}
+
+function flattenByPackage(snapshot, label) {
+  const map = new Map();
+  for (const pkg of snapshot) {
+    for (const exp of pkg.exports) {
+      for (const file of exp.files) {
+        const key = [pkg.name, pkg.path || '', exp.exportPath, file.file].join('::');
+        const existing = map.get(key) || {
+          packageName: pkg.name,
+          packagePath: pkg.path,
+          exportPath: exp.exportPath,
+          file: file.file,
+          mainSize: 0,
+          prSize: 0,
+        };
+        existing[label] = file.size;
+        map.set(key, existing);
+      }
+    }
+  }
+  return map;
+}
+
+function mergeSnapshots(mainSnapshot, prSnapshot) {
+  const mainMap = flattenByPackage(mainSnapshot, 'mainSize');
+  const prMap = flattenByPackage(prSnapshot, 'prSize');
+
+  const merged = new Map(mainMap);
+  for (const [key, value] of prMap.entries()) {
+    const existing = merged.get(key);
+    if (existing) {
+      existing.prSize = value.prSize;
+    } else {
+      merged.set(key, value);
+    }
+  }
+
+  const packageMap = new Map();
+  for (const value of merged.values()) {
+    const pkgKey = `${value.packageName}::${value.packagePath || ''}`;
+    if (!packageMap.has(pkgKey)) {
+      packageMap.set(pkgKey, {
+        name: value.packageName,
+        path: value.packagePath,
+        exports: new Map(),
+      });
+    }
+    const pkg = packageMap.get(pkgKey);
+    if (!pkg.exports.has(value.exportPath)) pkg.exports.set(value.exportPath, []);
+    pkg.exports.get(value.exportPath).push({
+      file: value.file,
+      mainSize: value.mainSize,
+      prSize: value.prSize,
+    });
+  }
+
+  return [...packageMap.values()].map((pkg) => ({
+    name: pkg.name,
+    ...(pkg.path ? { path: pkg.path } : {}),
+    exports: [...pkg.exports.entries()].map(([exportPath, files]) => ({ exportPath, files })),
+  }));
+}
+
+function setOutput(name, value) {
+  const out = process.env.GITHUB_OUTPUT;
+  if (!out) return;
+  fs.appendFileSync(out, `${name}=${value}\n`);
+}
+
+async function main() {
+  const apiKey = getInput('api-key');
+  const apiUrl = getInput('api-url', 'https://api.example.com');
+  const baseBranchInput = getInput('base-branch', 'main');
+  const workingDirectory = path.resolve(getInput('working-directory', '.'));
+  const installCommand = getInput('install-command', 'npm ci');
+  const buildCommand = resolveBuildCommand(workingDirectory, getInput('build-command', 'npm run build'));
+
+  if (!apiKey) throw new Error('Missing required input: api-key');
+
+  const eventName = process.env.GITHUB_EVENT_NAME;
+  if (eventName !== 'pull_request') {
+    throw new Error(`This action only supports pull_request events (received: ${eventName || 'unknown'})`);
+  }
+
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath || !fs.existsSync(eventPath)) {
+    throw new Error('GITHUB_EVENT_PATH is not available');
+  }
+  const event = readJson(eventPath);
+  const pr = event.pull_request;
+  if (!pr) throw new Error('pull_request payload is missing');
+
+  const repository = process.env.GITHUB_REPOSITORY;
+  const prNumber = pr.number;
+  const prTitle = pr.title;
+  const branch = pr.head?.ref;
+  const commitSha = pr.head?.sha;
+  const baseBranch = pr.base?.ref || baseBranchInput;
+
+  if (!repository || !prNumber || !branch || !commitSha) {
+    throw new Error('Missing required GitHub metadata');
+  }
+
+  run(installCommand, workingDirectory);
+  run(buildCommand, workingDirectory);
+  const prSnapshot = collectSnapshot(workingDirectory);
+
+  const startingSha = execSync('git rev-parse HEAD', { cwd: workingDirectory, encoding: 'utf8' }).trim();
+
+  try {
+    run(`git fetch --no-tags origin ${baseBranch}`, workingDirectory);
+    run(`git checkout --force origin/${baseBranch}`, workingDirectory);
+
+    run(installCommand, workingDirectory);
+    run(buildCommand, workingDirectory);
+  } finally {
+    run(`git checkout --force ${startingSha}`, workingDirectory);
+  }
+
+  const mainSnapshot = collectSnapshot(workingDirectory);
+  const payload = {
+    repository,
+    prNumber,
+    prTitle,
+    branch,
+    commitSha,
+    packages: mergeSnapshots(mainSnapshot, prSnapshot),
+  };
+
+  const endpoint = `${apiUrl.replace(/\/$/, '')}/api/report`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const bodyText = await response.text();
+  if (!response.ok) {
+    throw new Error(`Boris API request failed (${response.status}): ${bodyText}`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    parsed = { success: true };
+  }
+
+  const records = Number(parsed.recordsCreated || 0);
+  setOutput('records-created', records);
+  console.log(`Reported bundle sizes to Boris (${records} records).`);
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

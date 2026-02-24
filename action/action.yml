@@ -1,0 +1,33 @@
+name: 'Boris Bundle Tracker'
+description: 'Measure package export bundle sizes on PRs and report diffs to Boris.'
+author: 'Boris'
+inputs:
+  api-key:
+    description: 'Boris API key (bbt_...)'
+    required: true
+  api-url:
+    description: 'Boris API base URL'
+    required: false
+    default: 'https://api.example.com'
+  base-branch:
+    description: 'Base branch to compare against'
+    required: false
+    default: 'main'
+  working-directory:
+    description: 'Workspace root where package.json lives'
+    required: false
+    default: '.'
+  build-command:
+    description: 'Command used to build packages'
+    required: false
+    default: 'npm run build'
+  install-command:
+    description: 'Command used to install dependencies'
+    required: false
+    default: 'npm ci'
+outputs:
+  records-created:
+    description: 'Number of package evolution records created by the API'
+runs:
+  using: 'node20'
+  main: 'index.js'
