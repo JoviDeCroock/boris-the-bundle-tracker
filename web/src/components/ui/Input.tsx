@@ -34,5 +34,7 @@ export function Label({ class: className, children, ...props }: LabelProps) {
 }
 
 export function LabelText({ children }: { children: preact.ComponentChildren }) {
-  return <span class="text-xs font-mono text-neutral-500 uppercase tracking-wider">{children}</span>;
+  return (
+    <span class="text-xs font-mono text-neutral-500 uppercase tracking-wider">{children}</span>
+  );
 }

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Bindings } from "../types";
 
@@ -247,4 +247,109 @@ report.post("/", async (c) => {
   }
 
   return c.json({ success: true, recordsCreated: upsertedCount });
+});
+
+
+/**
+ * PATCH /api/report
+ *
+ * Lightweight endpoint called by the GitHub Action on `pull_request closed`
+ * events. Skips the build entirely and just updates the prMerged / prState
+ * fields on every existing evolution record for this PR.
+ *
+ * Authenticated with `Authorization: Bearer <api-key>` (same as POST).
+ */
+report.patch("/", async (c) => {
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return c.json({ error: "Missing or invalid Authorization header" }, 401);
+  }
+
+  const rawKey = authHeader.slice(7).trim();
+  if (!rawKey.startsWith("bbt_")) {
+    return c.json({ error: "Invalid API key format" }, 401);
+  }
+
+  const db = drizzle(c.env.DB, { schema });
+  const keyHash = await hashKey(rawKey);
+
+  const keyRecord = await db
+    .select()
+    .from(schema.apiKey)
+    .where(eq(schema.apiKey.keyHash, keyHash))
+    .get();
+
+  if (!keyRecord) {
+    return c.json({ error: "Invalid API key" }, 401);
+  }
+
+  // ── Parse body ────────────────────────────────────────────────────────────
+  let body: { repository: string; prNumber: number; prMerged?: boolean; prState?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { repository: repoSlug, prNumber, prMerged, prState } = body;
+
+  if (!repoSlug || !prNumber) {
+    return c.json({ error: "Missing required fields: repository, prNumber" }, 400);
+  }
+
+  const parts = repoSlug.split("/");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return c.json({ error: "repository must be in owner/name format" }, 400);
+  }
+  const [owner, name] = parts;
+
+  // ── Verify the API key belongs to this repository ─────────────────────────
+  const repo = await db
+    .select()
+    .from(schema.repository)
+    .where(
+      and(
+        sql`lower(${schema.repository.owner}) = lower(${owner})`,
+        sql`lower(${schema.repository.name}) = lower(${name})`,
+      ),
+    )
+    .get();
+
+  if (!repo || repo.id !== keyRecord.repositoryId) {
+    return c.json({ error: "API key does not belong to this repository" }, 403);
+  }
+
+  // ── Update key last-used timestamp ────────────────────────────────────────
+  await db
+    .update(schema.apiKey)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(schema.apiKey.id, keyRecord.id));
+
+  // ── Update all evolution records for this PR ──────────────────────────────
+  const repoPackages = await db
+    .select({ id: schema.package_.id })
+    .from(schema.package_)
+    .where(eq(schema.package_.repositoryId, repo.id));
+
+  if (repoPackages.length === 0) {
+    return c.json({ success: true, recordsUpdated: 0 });
+  }
+
+  const packageIds = repoPackages.map((p) => p.id);
+
+  await db
+    .update(schema.packageEvolution)
+    .set({
+      prMerged: Boolean(prMerged),
+      prState: prState === "closed" ? "closed" : "open",
+    })
+    .where(
+      and(
+        inArray(schema.packageEvolution.packageId, packageIds),
+        eq(schema.packageEvolution.prNumber, prNumber),
+      ),
+    );
+
+  return c.json({ success: true });
 });

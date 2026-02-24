@@ -20,10 +20,7 @@ repositories.get("/", async (c) => {
       updatedAt: schema.repository.updatedAt,
     })
     .from(schema.userRepository)
-    .innerJoin(
-      schema.repository,
-      eq(schema.userRepository.repositoryId, schema.repository.id),
-    )
+    .innerJoin(schema.repository, eq(schema.userRepository.repositoryId, schema.repository.id))
     .where(eq(schema.userRepository.userId, userId))
     .all();
 
@@ -82,7 +79,10 @@ repositories.post("/", async (c) => {
     .select()
     .from(schema.userRepository)
     .where(
-      and(eq(schema.userRepository.userId, userId), eq(schema.userRepository.repositoryId, repo.id)),
+      and(
+        eq(schema.userRepository.userId, userId),
+        eq(schema.userRepository.repositoryId, repo.id),
+      ),
     )
     .get();
 
@@ -109,7 +109,10 @@ repositories.delete("/:id", async (c) => {
     .select()
     .from(schema.userRepository)
     .where(
-      and(eq(schema.userRepository.userId, userId), eq(schema.userRepository.repositoryId, repositoryId)),
+      and(
+        eq(schema.userRepository.userId, userId),
+        eq(schema.userRepository.repositoryId, repositoryId),
+      ),
     )
     .get();
 
@@ -120,7 +123,10 @@ repositories.delete("/:id", async (c) => {
   await db
     .delete(schema.userRepository)
     .where(
-      and(eq(schema.userRepository.userId, userId), eq(schema.userRepository.repositoryId, repositoryId)),
+      and(
+        eq(schema.userRepository.userId, userId),
+        eq(schema.userRepository.repositoryId, repositoryId),
+      ),
     );
 
   return c.json({ success: true });

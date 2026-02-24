@@ -73,7 +73,9 @@ export function Dashboard() {
 
         {/* Add repository */}
         <div class="rounded-xl border border-neutral-800 p-5 mb-5" style="background: #111113;">
-          <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider mb-3">Add repository</h2>
+          <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider mb-3">
+            Add repository
+          </h2>
           <form onSubmit={handleAddRepo} class="flex gap-2">
             <Input
               type="text"
@@ -90,10 +92,17 @@ export function Dashboard() {
         </div>
 
         {/* Repository list */}
-        <div class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
+        <div
+          class="rounded-xl border border-neutral-800 overflow-hidden"
+          style="background: #111113;"
+        >
           <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800/60">
-            <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">Tracked repositories</h2>
-            <span class="font-mono text-xs text-neutral-600">{repos.repositories.value.length} linked</span>
+            <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">
+              Tracked repositories
+            </h2>
+            <span class="font-mono text-xs text-neutral-600">
+              {repos.repositories.value.length} linked
+            </span>
           </div>
 
           {repos.reposLoading.value ? (
@@ -107,8 +116,18 @@ export function Dashboard() {
           ) : repos.repositories.value.length === 0 ? (
             <div class="py-12 text-center px-5">
               <div class="w-10 h-10 rounded-lg bg-neutral-800 flex items-center justify-center mx-auto mb-3">
-                <svg class="w-5 h-5 text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                <svg
+                  class="w-5 h-5 text-neutral-600"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+                  />
                 </svg>
               </div>
               <p class="text-sm text-neutral-600">No repositories yet.</p>
@@ -117,13 +136,14 @@ export function Dashboard() {
           ) : (
             <ul class="divide-y divide-neutral-800/60">
               {repos.repositories.value.map((repo) => (
-                <li key={repo.id} class="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.015] transition-colors group">
-                  <button
-                    class="text-left min-w-0"
-                    onClick={() => route(`/repository/${repo.id}`)}
-                  >
+                <li
+                  key={repo.id}
+                  class="flex items-center justify-between px-5 py-3.5 hover:bg-white/[0.015] transition-colors group"
+                >
+                  <button class="text-left min-w-0" onClick={() => route(`/repository/${repo.id}`)}>
                     <span class="text-sm font-mono text-neutral-300 group-hover:text-white transition-colors">
-                      <span class="text-neutral-600">{repo.owner}/</span>{repo.name}
+                      <span class="text-neutral-600">{repo.owner}/</span>
+                      {repo.name}
                     </span>
                   </button>
                   <div class="flex items-center gap-1 shrink-0">
@@ -143,8 +163,18 @@ export function Dashboard() {
                       }}
                       title="Remove repository"
                     >
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={1.5}>
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width={1.5}
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </Button>
                   </div>

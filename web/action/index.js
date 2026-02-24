@@ -256,7 +256,9 @@ function measureFileSizes(filePath) {
 function collectSnapshot(rootDir) {
   const packages = [];
   for (const entry of findPackages(rootDir)) {
-    let exportsList = parseExports(entry.pkg.exports).filter((e) => e.file.endsWith(".js") || e.file.endsWith(".mjs") || e.file.endsWith(".cjs"));
+    let exportsList = parseExports(entry.pkg.exports).filter(
+      (e) => e.file.endsWith(".js") || e.file.endsWith(".mjs") || e.file.endsWith(".cjs"),
+    );
     if (!exportsList.length) exportsList = parseMainModuleFiles(entry.pkg);
     if (!exportsList.length) continue;
 

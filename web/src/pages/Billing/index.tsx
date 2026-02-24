@@ -45,22 +45,20 @@ export function Billing() {
             class="mb-6 rounded-xl border p-4"
             style="background: rgba(34,197,94,0.05); border-color: rgba(34,197,94,0.2);"
           >
-            <p class="text-sm text-emerald-400">
-              Your subscription has been updated successfully.
-            </p>
+            <p class="text-sm text-emerald-400">Your subscription has been updated successfully.</p>
           </div>
         )}
 
-        {billing.error.value && (
-          <Alert class="mb-6">{billing.error.value}</Alert>
-        )}
+        {billing.error.value && <Alert class="mb-6">{billing.error.value}</Alert>}
 
         {/* Current Plan */}
         <div
           class="rounded-xl border overflow-hidden"
-          style={billing.isPro.value
-            ? "background: #111113; border-color: rgba(249,115,22,0.25); box-shadow: 0 0 30px rgba(249,115,22,0.04);"
-            : "background: #111113; border-color: rgba(255,255,255,0.06);"}
+          style={
+            billing.isPro.value
+              ? "background: #111113; border-color: rgba(249,115,22,0.25); box-shadow: 0 0 30px rgba(249,115,22,0.04);"
+              : "background: #111113; border-color: rgba(255,255,255,0.06);"
+          }
         >
           <div class="px-6 py-5 border-b border-neutral-800/60">
             <div class="flex items-center justify-between">
@@ -112,7 +110,6 @@ export function Billing() {
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

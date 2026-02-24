@@ -25,7 +25,13 @@ export function AuthForm({ onSuccess, compact = false }: AuthFormProps) {
   }
 
   return (
-    <div class={compact ? "w-full" : "min-h-screen flex items-center justify-center px-4 pt-14 relative overflow-hidden bg-neutral-950"}>
+    <div
+      class={
+        compact
+          ? "w-full"
+          : "min-h-screen flex items-center justify-center px-4 pt-14 relative overflow-hidden bg-neutral-950"
+      }
+    >
       {/* Background grid */}
       {!compact && (
         <>
@@ -86,7 +92,9 @@ export function AuthForm({ onSuccess, compact = false }: AuthFormProps) {
             {form.tab.value === "signin" ? "Welcome back" : "Create your account"}
           </h1>
           <p class="text-xs text-neutral-600 mb-6 font-mono">
-            {form.tab.value === "signin" ? "Sign in to your Boris dashboard" : "Start tracking bundle sizes for free"}
+            {form.tab.value === "signin"
+              ? "Sign in to your Boris dashboard"
+              : "Start tracking bundle sizes for free"}
           </p>
 
           {form.tab.value === "signin" ? (

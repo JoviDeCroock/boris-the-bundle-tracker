@@ -35,61 +35,67 @@ user  ────────────────────────�
 ```
 
 ### `user`
+
 Standard BetterAuth user (email + password). Managed by the auth framework.
 
 ### `repository`
+
 A GitHub repository (`owner`/`name`) tracked by Boris. Repositories are shared: the same GitHub repository can be linked by multiple users; a junction table (`user_repository`) records the association.
 
 ### `user_repository`
+
 Many-to-many join between users and repositories.
 
-| Column | Type | Notes |
-|---|---|---|
-| user_id | text PK | FK → user |
-| repository_id | text PK | FK → repository |
-| created_at | timestamp | |
+| Column        | Type      | Notes           |
+| ------------- | --------- | --------------- |
+| user_id       | text PK   | FK → user       |
+| repository_id | text PK   | FK → repository |
+| created_at    | timestamp |                 |
 
 ### `api_key`
+
 Scoped to a repository. Used by the GitHub Action to authenticate `POST /api/report`. The full key (`bbt_<64 hex chars>`) is shown only once at creation time; only its SHA-256 hash is stored in the database.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | text PK | UUID |
-| repository_id | text | FK → repository |
-| name | text | Human-readable label |
-| key_hash | text unique | SHA-256 of the raw key |
-| key_prefix | text | First 12 chars for display |
-| created_at | timestamp | |
-| last_used_at | timestamp | Updated on each report |
+| Column        | Type        | Notes                      |
+| ------------- | ----------- | -------------------------- |
+| id            | text PK     | UUID                       |
+| repository_id | text        | FK → repository            |
+| name          | text        | Human-readable label       |
+| key_hash      | text unique | SHA-256 of the raw key     |
+| key_prefix    | text        | First 12 chars for display |
+| created_at    | timestamp   |                            |
+| last_used_at  | timestamp   | Updated on each report     |
 
 ### `package`
+
 An npm package (identified by its `package.json` `name`) within a repository. For monorepos, `path` contains the relative directory of the package (e.g. `packages/ui`). Packages are upserted automatically when the GitHub Action submits a report.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | text PK | UUID |
-| repository_id | text | FK → repository |
-| name | text | Package name from package.json |
-| path | text? | Relative path in monorepo |
-| created_at | timestamp | |
-| updated_at | timestamp | |
+| Column        | Type      | Notes                          |
+| ------------- | --------- | ------------------------------ |
+| id            | text PK   | UUID                           |
+| repository_id | text      | FK → repository                |
+| name          | text      | Package name from package.json |
+| path          | text?     | Relative path in monorepo      |
+| created_at    | timestamp |                                |
+| updated_at    | timestamp |                                |
 
 ### `package_evolution`
-One record per *(package, PR, export path, file)*. Records the compiled size on the base branch (`main_size`) and on the PR branch (`pr_size`), allowing the diff to be computed at query time.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | text PK | UUID |
-| package_id | text | FK → package |
-| pr_number | integer | GitHub PR number |
-| pr_title | text? | PR title |
-| branch | text | Feature branch name |
-| commit_sha | text | Head commit of the PR |
-| export_path | text | Export map key, e.g. `"."` |
-| file_name | text | Output file, e.g. `"dist/index.js"` |
-| main_size | integer | Bytes on base branch |
-| pr_size | integer | Bytes on PR branch |
-| reported_at | timestamp | When the Action submitted |
+One record per _(package, PR, export path, file)_. Records the compiled size on the base branch (`main_size`) and on the PR branch (`pr_size`), allowing the diff to be computed at query time.
+
+| Column      | Type      | Notes                               |
+| ----------- | --------- | ----------------------------------- |
+| id          | text PK   | UUID                                |
+| package_id  | text      | FK → package                        |
+| pr_number   | integer   | GitHub PR number                    |
+| pr_title    | text?     | PR title                            |
+| branch      | text      | Feature branch name                 |
+| commit_sha  | text      | Head commit of the PR               |
+| export_path | text      | Export map key, e.g. `"."`          |
+| file_name   | text      | Output file, e.g. `"dist/index.js"` |
+| main_size   | integer   | Bytes on base branch                |
+| pr_size     | integer   | Bytes on PR branch                  |
+| reported_at | timestamp | When the Action submitted           |
 
 ---
 
@@ -102,12 +108,12 @@ One record per *(package, PR, export path, file)*. Records the compiled size on 
 
 ### Route groups
 
-| Mount | Auth | Description |
-|---|---|---|
-| `/api/auth/*` | — | BetterAuth endpoints (sign-in, sign-up, …) |
-| `/api/billing-success` | — | Polar checkout redirect handler |
-| `/api/v1/*` | Session cookie | Protected endpoints (below) |
-| `/api/report` | Bearer API key | Bundle-size report from GitHub Action |
+| Mount                  | Auth           | Description                                |
+| ---------------------- | -------------- | ------------------------------------------ |
+| `/api/auth/*`          | —              | BetterAuth endpoints (sign-in, sign-up, …) |
+| `/api/billing-success` | —              | Polar checkout redirect handler            |
+| `/api/v1/*`            | Session cookie | Protected endpoints (below)                |
+| `/api/report`          | Bearer API key | Bundle-size report from GitHub Action      |
 
 ### Protected endpoints (`/api/v1/`)
 
@@ -137,31 +143,31 @@ DELETE /repositories/:id/packages/:pkgId      Delete a package
 
 ### Pages
 
-| Path | Component | Description |
-|---|---|---|
-| `/` | `Home` | Landing page |
-| `/auth` | `Auth` | Sign-in / sign-up |
-| `/dashboard` | `Dashboard` | Repository list |
+| Path              | Component        | Description                     |
+| ----------------- | ---------------- | ------------------------------- |
+| `/`               | `Home`           | Landing page                    |
+| `/auth`           | `Auth`           | Sign-in / sign-up               |
+| `/dashboard`      | `Dashboard`      | Repository list                 |
 | `/repository/:id` | `RepositoryPage` | Packages, API keys, setup guide |
-| `/billing` | `Billing` | Subscription management |
+| `/billing`        | `Billing`        | Subscription management         |
 
 ### Key models (Preact Signals)
 
-| Model | File | Responsibility |
-|---|---|---|
-| `AuthModel` | `models/auth.ts` | Session state, sign-out |
+| Model               | File                     | Responsibility                        |
+| ------------------- | ------------------------ | ------------------------------------- |
+| `AuthModel`         | `models/auth.ts`         | Session state, sign-out               |
 | `RepositoriesModel` | `models/repositories.ts` | Repos, API keys, packages, evolutions |
-| `BillingModel` | `models/billing.ts` | Subscription plan and upgrade |
+| `BillingModel`      | `models/billing.ts`      | Subscription plan and upgrade         |
 
 ---
 
 ## Subscription tiers
 
-| Limit | Free | Pro |
-|---|---|---|
-| Repositories | 3 | 50 |
-| API keys per repo | 2 | 10 |
-| History retained | 30 days | 365 days |
+| Limit             | Free    | Pro      |
+| ----------------- | ------- | -------- |
+| Repositories      | 3       | 50       |
+| API keys per repo | 2       | 10       |
+| History retained  | 30 days | 365 days |
 
 ---
 

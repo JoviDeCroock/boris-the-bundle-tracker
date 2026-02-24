@@ -41,7 +41,15 @@ function diffBadge(mainSize: number, prSize: number) {
   );
 }
 
-function SizeCell({ raw, gzip, brotli }: { raw: number; gzip: number | null; brotli: number | null }) {
+function SizeCell({
+  raw,
+  gzip,
+  brotli,
+}: {
+  raw: number;
+  gzip: number | null;
+  brotli: number | null;
+}) {
   return (
     <div class="font-mono text-xs space-y-0.5">
       <div class="text-neutral-300">{formatBytes(raw)}</div>
@@ -95,7 +103,8 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   if (!open) return null;
 
-  const activeFile = ACTION_INSTALL_FILES.find((file) => file.id === activeFileId) ?? ACTION_INSTALL_FILES[0];
+  const activeFile =
+    ACTION_INSTALL_FILES.find((file) => file.id === activeFileId) ?? ACTION_INSTALL_FILES[0];
 
   async function copyText(text: string, label: string) {
     try {
@@ -128,8 +137,9 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
               Add Boris action files to your repository
             </h2>
             <p class="text-xs text-neutral-600 mt-1">
-              Create <code class="font-mono text-neutral-500">.github/actions/boris-bundle-tracker/</code> and copy
-              these files in.
+              Create{" "}
+              <code class="font-mono text-neutral-500">.github/actions/boris-bundle-tracker/</code>{" "}
+              and copy these files in.
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -142,8 +152,9 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
             class="rounded-lg border border-neutral-800/60 p-3 text-xs text-neutral-500 font-mono"
             style="background: rgba(0,0,0,0.2);"
           >
-            Then use <code class="text-neutral-300">uses: ./.github/actions/boris-bundle-tracker</code> in your
-            workflow.
+            Then use{" "}
+            <code class="text-neutral-300">uses: ./.github/actions/boris-bundle-tracker</code> in
+            your workflow.
           </div>
         </div>
 
@@ -170,10 +181,18 @@ function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => voi
               class="px-4 py-3 border-b border-neutral-800/60 flex flex-wrap items-center justify-between gap-2"
               style="background: rgba(0,0,0,0.2);"
             >
-              <code class="font-mono text-xs text-neutral-400 break-all">{activeFile.targetPath}</code>
+              <code class="font-mono text-xs text-neutral-400 break-all">
+                {activeFile.targetPath}
+              </code>
               <div class="flex items-center gap-2">
-                {copiedLabel && <span class="font-mono text-[10px] text-emerald-500">{copiedLabel}</span>}
-                <Button size="sm" variant="secondary" onClick={() => copyText(activeFile.targetPath, "path")}>
+                {copiedLabel && (
+                  <span class="font-mono text-[10px] text-emerald-500">{copiedLabel}</span>
+                )}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => copyText(activeFile.targetPath, "path")}
+                >
                   Copy path
                 </Button>
                 <Button size="sm" onClick={() => copyText(activeFile.content, activeFile.name)}>
@@ -222,7 +241,10 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
   }
 
   return (
-    <section class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
+    <section
+      class="rounded-xl border border-neutral-800 overflow-hidden"
+      style="background: #111113;"
+    >
       <div class="px-5 py-4 border-b border-neutral-800/60">
         <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">API Keys</h2>
         <p class="text-xs text-neutral-700 mt-1">
@@ -294,8 +316,18 @@ function ApiKeysPanel({ repoId }: { repoId: string }) {
                   }}
                   title="Delete key"
                 >
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={1.5}>
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width={1.5}
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                 </Button>
               </li>
@@ -339,12 +371,24 @@ function EvolutionsTable({
       <table class="w-full text-sm min-w-[560px]">
         <thead>
           <tr class="text-left border-b border-neutral-800/60">
-            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">PR</th>
-            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">Status</th>
-            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">File</th>
-            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">Main</th>
-            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">PR</th>
-            <th class="pb-2 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">Change (gz)</th>
+            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">
+              PR
+            </th>
+            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">
+              Status
+            </th>
+            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">
+              File
+            </th>
+            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">
+              Main
+            </th>
+            <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">
+              PR
+            </th>
+            <th class="pb-2 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">
+              Change (gz)
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-800/40">
@@ -355,10 +399,9 @@ function EvolutionsTable({
                 ? entry
                 : latest,
             );
-            const prUrl =
-              repository
-                ? `https://github.com/${repository.owner}/${repository.name}/pull/${prNumber}`
-                : `#${prNumber}`;
+            const prUrl = repository
+              ? `https://github.com/${repository.owner}/${repository.name}/pull/${prNumber}`
+              : `#${prNumber}`;
 
             return entries.map((ev, i) => (
               <tr key={ev.id} class="hover:bg-white/[0.015] transition-colors">
@@ -374,7 +417,9 @@ function EvolutionsTable({
                         #{prNumber}
                       </a>
                       {ev.prTitle && (
-                        <p class="text-xs text-neutral-600 mt-0.5 max-w-[10rem] truncate">{ev.prTitle}</p>
+                        <p class="text-xs text-neutral-600 mt-0.5 max-w-[10rem] truncate">
+                          {ev.prTitle}
+                        </p>
                       )}
                     </td>
                     <td class="py-2.5 pr-4 align-top" rowSpan={entries.length}>
@@ -396,24 +441,13 @@ function EvolutionsTable({
                 )}
                 <td class="py-2.5 pr-4 font-mono text-xs text-neutral-500">{ev.fileName}</td>
                 <td class="py-2.5 pr-4 align-top">
-                  <SizeCell
-                    raw={ev.mainSize}
-                    gzip={ev.gzipMainSize}
-                    brotli={ev.brotliMainSize}
-                  />
+                  <SizeCell raw={ev.mainSize} gzip={ev.gzipMainSize} brotli={ev.brotliMainSize} />
                 </td>
                 <td class="py-2.5 pr-4 align-top">
-                  <SizeCell
-                    raw={ev.prSize}
-                    gzip={ev.gzipPrSize}
-                    brotli={ev.brotliPrSize}
-                  />
+                  <SizeCell raw={ev.prSize} gzip={ev.gzipPrSize} brotli={ev.brotliPrSize} />
                 </td>
                 <td class="py-2.5 text-right">
-                  {diffBadge(
-                    ev.gzipMainSize ?? ev.mainSize,
-                    ev.gzipPrSize ?? ev.prSize,
-                  )}
+                  {diffBadge(ev.gzipMainSize ?? ev.mainSize, ev.gzipPrSize ?? ev.prSize)}
                 </td>
               </tr>
             ));
@@ -424,7 +458,13 @@ function EvolutionsTable({
   );
 }
 
-function PackagesPanel({ repoId, repository }: { repoId: string; repository: Repository | undefined }) {
+function PackagesPanel({
+  repoId,
+  repository,
+}: {
+  repoId: string;
+  repository: Repository | undefined;
+}) {
   const repos = useModel(RepositoriesModel);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -442,7 +482,10 @@ function PackagesPanel({ repoId, repository }: { repoId: string; repository: Rep
   }
 
   return (
-    <section class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
+    <section
+      class="rounded-xl border border-neutral-800 overflow-hidden"
+      style="background: #111113;"
+    >
       <div class="px-5 py-4 border-b border-neutral-800/60">
         <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">Packages</h2>
         <p class="text-xs text-neutral-700 mt-1">
@@ -457,7 +500,9 @@ function PackagesPanel({ repoId, repository }: { repoId: string; repository: Rep
       ) : repos.packages.value.length === 0 ? (
         <div class="py-10 px-5 text-center">
           <p class="font-mono text-xs text-neutral-700">No packages tracked yet.</p>
-          <p class="font-mono text-xs text-neutral-800 mt-1">Set up the GitHub Action to start collecting data.</p>
+          <p class="font-mono text-xs text-neutral-800 mt-1">
+            Set up the GitHub Action to start collecting data.
+          </p>
         </div>
       ) : (
         <ul class="divide-y divide-neutral-800/60">
@@ -482,8 +527,18 @@ function PackagesPanel({ repoId, repository }: { repoId: string; repository: Rep
                     }}
                     title="Delete package"
                   >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={1.5}>
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width={1.5}
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </Button>
                 </div>
@@ -492,22 +547,37 @@ function PackagesPanel({ repoId, repository }: { repoId: string; repository: Rep
               {expandedId === pkg.id && (
                 <div class="pb-4 space-y-3">
                   {repos.evolutionsLoading.value ? (
-                    <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                    <div
+                      class="rounded-lg border border-neutral-800/60 p-4"
+                      style="background: rgba(0,0,0,0.2);"
+                    >
                       <p class="font-mono text-xs text-neutral-600">Loading history…</p>
                     </div>
                   ) : repos.evolutionsError.value ? (
-                    <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                    <div
+                      class="rounded-lg border border-neutral-800/60 p-4"
+                      style="background: rgba(0,0,0,0.2);"
+                    >
                       <p class="font-mono text-xs text-red-400">{repos.evolutionsError.value}</p>
                     </div>
                   ) : (
                     <>
                       {repos.evolutions.value.some((ev) => ev.prMerged) && (
-                        <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                        <div
+                          class="rounded-lg border border-neutral-800/60 p-4"
+                          style="background: rgba(0,0,0,0.2);"
+                        >
                           <BundleSizeChart evolutions={repos.evolutions.value} />
                         </div>
                       )}
-                      <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
-                        <EvolutionsTable evolutions={repos.evolutions.value} repository={repository} />
+                      <div
+                        class="rounded-lg border border-neutral-800/60 p-4"
+                        style="background: rgba(0,0,0,0.2);"
+                      >
+                        <EvolutionsTable
+                          evolutions={repos.evolutions.value}
+                          repository={repository}
+                        />
                       </div>
                     </>
                   )}
@@ -554,11 +624,17 @@ export function RepositoryPage() {
 
   return (
     <div class="min-h-screen bg-neutral-950 pt-14">
-      <ActionFilesModal open={actionFilesModalOpen} onClose={() => setActionFilesModalOpen(false)} />
+      <ActionFilesModal
+        open={actionFilesModalOpen}
+        onClose={() => setActionFilesModalOpen(false)}
+      />
       <div class="max-w-3xl mx-auto px-6 py-10 space-y-5">
         {/* Breadcrumb */}
         <div class="flex items-center gap-2 font-mono text-xs text-neutral-600">
-          <button onClick={() => route("/dashboard")} class="hover:text-neutral-300 transition-colors">
+          <button
+            onClick={() => route("/dashboard")}
+            class="hover:text-neutral-300 transition-colors"
+          >
             repositories
           </button>
           <span>/</span>
@@ -571,13 +647,21 @@ export function RepositoryPage() {
         <ApiKeysPanel repoId={repoId} />
 
         {/* Setup instructions */}
-        <section class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
+        <section
+          class="rounded-xl border border-neutral-800 overflow-hidden"
+          style="background: #111113;"
+        >
           <div class="px-5 py-4 border-b border-neutral-800/60 flex items-start justify-between gap-4">
             <div>
-              <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">GitHub Action setup</h2>
+              <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">
+                GitHub Action setup
+              </h2>
               <p class="text-xs text-neutral-700 mt-1">
                 Store your API key as a GitHub secret named{" "}
-                <code class="font-mono text-neutral-500 bg-neutral-800/60 px-1 rounded">BORIS_API_KEY</code>.
+                <code class="font-mono text-neutral-500 bg-neutral-800/60 px-1 rounded">
+                  BORIS_API_KEY
+                </code>
+                .
               </p>
             </div>
             <Button size="sm" variant="secondary" onClick={() => setActionFilesModalOpen(true)}>
@@ -586,7 +670,8 @@ export function RepositoryPage() {
           </div>
           <div class="p-5">
             <p class="font-mono text-xs text-neutral-700 mb-3">
-              Add the action files to your repo (button above), then reference the local action in your workflow.
+              Add the action files to your repo (button above), then reference the local action in
+              your workflow.
             </p>
             <pre
               class="rounded-lg border border-neutral-800/60 p-4 text-xs text-neutral-400 overflow-x-auto font-mono leading-relaxed"

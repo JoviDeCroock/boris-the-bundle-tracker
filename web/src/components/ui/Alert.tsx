@@ -11,7 +11,9 @@ const variantClasses: Record<string, string> = {
 
 export function Alert({ children, variant = "error", class: className }: AlertProps) {
   if (variant === "inline-error") {
-    return <p class={`text-sm leading-normal text-red-400 ${className ?? ""}`.trim()}>{children}</p>;
+    return (
+      <p class={`text-sm leading-normal text-red-400 ${className ?? ""}`.trim()}>{children}</p>
+    );
   }
 
   return <div class={`${variantClasses[variant]} ${className ?? ""}`.trim()}>{children}</div>;

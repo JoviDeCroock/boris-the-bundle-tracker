@@ -12,9 +12,15 @@ export function Footer() {
           <span class="text-sm font-bold text-white tracking-tight">Boris</span>
         </a>
         <nav class="flex gap-6 text-sm text-neutral-600">
-          <a href="#features" class="hover:text-neutral-300 transition-colors">Features</a>
-          <a href="#how-it-works" class="hover:text-neutral-300 transition-colors">How it works</a>
-          <a href="#pricing" class="hover:text-neutral-300 transition-colors">Pricing</a>
+          <a href="#features" class="hover:text-neutral-300 transition-colors">
+            Features
+          </a>
+          <a href="#how-it-works" class="hover:text-neutral-300 transition-colors">
+            How it works
+          </a>
+          <a href="#pricing" class="hover:text-neutral-300 transition-colors">
+            Pricing
+          </a>
           <a
             href="https://github.com/JoviDeCroock/boris-the-bundle-tracker"
             class="hover:text-neutral-300 transition-colors"
@@ -24,9 +30,7 @@ export function Footer() {
             GitHub
           </a>
         </nav>
-        <p class="font-mono text-xs text-neutral-700">
-          &copy; {new Date().getFullYear()} Boris
-        </p>
+        <p class="font-mono text-xs text-neutral-700">&copy; {new Date().getFullYear()} Boris</p>
       </div>
     </footer>
   );

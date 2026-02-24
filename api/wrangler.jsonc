@@ -6,18 +6,18 @@
   "compatibility_flags": ["nodejs_compat"],
   "preview_urls": false,
   "workers_dev": false,
-  "placement": {"mode": "smart"},
+  "placement": { "mode": "smart" },
   "observability": {
     "logs": {
       "enabled": true,
-      "invocation_logs": true
-    }
+      "invocation_logs": true,
+    },
   },
   "routes": [
     {
       "pattern": "boris-api.resynapse.dev",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
   "vars": {
     "BETTER_AUTH_URL": "https://boris-api.resynapse.dev",

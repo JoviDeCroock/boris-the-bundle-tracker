@@ -16,7 +16,16 @@ interface Props {
   evolutions: PackageEvolution[];
 }
 
-const COLORS = ["#f97316", "#10b981", "#38bdf8", "#a78bfa", "#fb7185", "#fbbf24", "#34d399", "#e879f9"];
+const COLORS = [
+  "#f97316",
+  "#10b981",
+  "#38bdf8",
+  "#a78bfa",
+  "#fb7185",
+  "#fbbf24",
+  "#34d399",
+  "#e879f9",
+];
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -34,7 +43,8 @@ function niceAxisMax(rawMax: number): number {
   if (rawMax === 0) return 100;
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawMax)));
   const normalised = rawMax / magnitude;
-  const nice = normalised <= 1.5 ? 1.5 : normalised <= 2 ? 2 : normalised <= 3 ? 3 : normalised <= 5 ? 5 : 10;
+  const nice =
+    normalised <= 1.5 ? 1.5 : normalised <= 2 ? 2 : normalised <= 3 ? 3 : normalised <= 5 ? 5 : 10;
   return nice * magnitude;
 }
 
@@ -88,9 +98,9 @@ export function BundleSizeChart({ evolutions }: Props) {
   const PH = H - PAD_T - PAD_B;
 
   // Collect all unique PR numbers across files, sorted
-  const allPrNums = Array.from(
-    new Set([...mergedLatest.values()].map((ev) => ev.prNumber)),
-  ).sort((a, b) => a - b);
+  const allPrNums = Array.from(new Set([...mergedLatest.values()].map((ev) => ev.prNumber))).sort(
+    (a, b) => a - b,
+  );
 
   const xOf = (prNum: number): number => {
     const i = allPrNums.indexOf(prNum);
@@ -148,7 +158,10 @@ export function BundleSizeChart({ evolutions }: Props) {
       )}
 
       {/* SVG chart */}
-      <div class="overflow-x-auto rounded-lg border border-neutral-800/60" style="background: rgba(0,0,0,0.25);">
+      <div
+        class="overflow-x-auto rounded-lg border border-neutral-800/60"
+        style="background: rgba(0,0,0,0.25);"
+      >
         <svg
           viewBox={`0 0 ${W} ${H}`}
           width="100%"
@@ -233,7 +246,9 @@ export function BundleSizeChart({ evolutions }: Props) {
 
             if (points.length === 0) return null;
 
-            const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+            const pathD = points
+              .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+              .join(" ");
 
             return (
               <g key={fileKey}>
@@ -281,47 +296,50 @@ export function BundleSizeChart({ evolutions }: Props) {
           })}
 
           {/* Tooltip */}
-          {tooltip && (() => {
-            const TW = 180;
-            const TH = tooltip.prTitle ? 44 : 30;
-            const tx = Math.min(tooltip.x + 10, W - TW - 4);
-            const ty = Math.max(tooltip.y - TH - 8, 4);
-            return (
-              <g style="pointer-events: none;">
-                <rect
-                  x={tx}
-                  y={ty}
-                  width={TW}
-                  height={TH}
-                  rx="4"
-                  fill="#1c1c1e"
-                  stroke="rgba(255,255,255,0.1)"
-                  stroke-width="0.5"
-                />
-                <text
-                  x={tx + 8}
-                  y={ty + 13}
-                  fill="#d4d4d4"
-                  font-family="ui-monospace,monospace"
-                  font-size="10"
-                  font-weight="600"
-                >
-                  #{tooltip.prNumber} · {formatBytes(tooltip.size)}
-                </text>
-                {tooltip.prTitle && (
+          {tooltip &&
+            (() => {
+              const TW = 180;
+              const TH = tooltip.prTitle ? 44 : 30;
+              const tx = Math.min(tooltip.x + 10, W - TW - 4);
+              const ty = Math.max(tooltip.y - TH - 8, 4);
+              return (
+                <g style="pointer-events: none;">
+                  <rect
+                    x={tx}
+                    y={ty}
+                    width={TW}
+                    height={TH}
+                    rx="4"
+                    fill="#1c1c1e"
+                    stroke="rgba(255,255,255,0.1)"
+                    stroke-width="0.5"
+                  />
                   <text
                     x={tx + 8}
-                    y={ty + 29}
-                    fill="#737373"
+                    y={ty + 13}
+                    fill="#d4d4d4"
                     font-family="ui-monospace,monospace"
-                    font-size="9"
+                    font-size="10"
+                    font-weight="600"
                   >
-                    {tooltip.prTitle.length > 22 ? tooltip.prTitle.slice(0, 22) + "…" : tooltip.prTitle}
+                    #{tooltip.prNumber} · {formatBytes(tooltip.size)}
                   </text>
-                )}
-              </g>
-            );
-          })()}
+                  {tooltip.prTitle && (
+                    <text
+                      x={tx + 8}
+                      y={ty + 29}
+                      fill="#737373"
+                      font-family="ui-monospace,monospace"
+                      font-size="9"
+                    >
+                      {tooltip.prTitle.length > 22
+                        ? tooltip.prTitle.slice(0, 22) + "…"
+                        : tooltip.prTitle}
+                    </text>
+                  )}
+                </g>
+              );
+            })()}
         </svg>
       </div>
 
@@ -334,7 +352,15 @@ export function BundleSizeChart({ evolutions }: Props) {
             return (
               <div key={fileKey} class="flex items-center gap-1.5">
                 <svg width="16" height="2" class="shrink-0" style="overflow: visible;">
-                  <line x1="0" y1="1" x2="16" y2="1" stroke={COLORS[fi % COLORS.length]} stroke-width="2" stroke-linecap="round" />
+                  <line
+                    x1="0"
+                    y1="1"
+                    x2="16"
+                    y2="1"
+                    stroke={COLORS[fi % COLORS.length]}
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
                 <span class="font-mono text-[10px] text-neutral-600">{label}</span>
               </div>
