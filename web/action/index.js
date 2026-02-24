@@ -356,7 +356,6 @@ async function main() {
     getInput("build-command") || defaultBuildCommand(pm),
   );
 
-  console.log('apiKey', apiKey ? '***' : '(not set)');
   if (!apiKey) throw new Error("Missing required input: api-key");
 
   const eventName = process.env.GITHUB_EVENT_NAME;

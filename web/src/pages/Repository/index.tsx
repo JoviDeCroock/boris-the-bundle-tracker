@@ -7,6 +7,8 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import type { Repository, PackageEvolution } from "../../lib/api";
 import { BundleSizeChart } from "../../components/BundleSizeChart";
+import actionDefinitionFile from "../../../action/action.yml?raw";
+import actionRuntimeFile from "../../../action/index.js?raw";
 
 // ── Utility helpers ───────────────────────────────────────────────────────────
 
@@ -53,6 +55,141 @@ function SizeCell({ raw, gzip, brotli }: { raw: number; gzip: number | null; bro
           {formatBytes(brotli)} <span class="text-neutral-600">br</span>
         </div>
       )}
+    </div>
+  );
+}
+
+const ACTION_INSTALL_FILES = [
+  {
+    id: "action-yml",
+    name: "action.yml",
+    targetPath: ".github/actions/boris-bundle-tracker/action.yml",
+    content: actionDefinitionFile,
+    languageClass: "language-yaml",
+  },
+  {
+    id: "index-js",
+    name: "index.js",
+    targetPath: ".github/actions/boris-bundle-tracker/index.js",
+    content: actionRuntimeFile,
+    languageClass: "language-javascript",
+  },
+] as const;
+
+function ActionFilesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [activeFileId, setActiveFileId] = useState<(typeof ACTION_INSTALL_FILES)[number]["id"]>(
+    ACTION_INSTALL_FILES[0].id,
+  );
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const activeFile = ACTION_INSTALL_FILES.find((file) => file.id === activeFileId) ?? ACTION_INSTALL_FILES[0];
+
+  async function copyText(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedLabel(label);
+      window.setTimeout(() => {
+        setCopiedLabel((current) => (current === label ? null : current));
+      }, 1500);
+    } catch {
+      setCopiedLabel(`Failed to copy ${label}`);
+    }
+  }
+
+  return (
+    <div
+      class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="action-files-modal-title"
+    >
+      <div
+        class="w-full max-w-5xl rounded-xl border border-neutral-800 overflow-hidden"
+        style="background: #111113;"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div class="px-5 py-4 border-b border-neutral-800/60 flex items-start justify-between gap-4">
+          <div>
+            <h2 id="action-files-modal-title" class="text-sm font-semibold text-white">
+              Add Boris action files to your repository
+            </h2>
+            <p class="text-xs text-neutral-600 mt-1">
+              Create <code class="font-mono text-neutral-500">.github/actions/boris-bundle-tracker/</code> and copy
+              these files in.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+
+        <div class="px-5 pt-4">
+          <div
+            class="rounded-lg border border-neutral-800/60 p-3 text-xs text-neutral-500 font-mono"
+            style="background: rgba(0,0,0,0.2);"
+          >
+            Then use <code class="text-neutral-300">uses: ./.github/actions/boris-bundle-tracker</code> in your
+            workflow.
+          </div>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div class="flex flex-wrap gap-2">
+            {ACTION_INSTALL_FILES.map((file) => (
+              <button
+                key={file.id}
+                type="button"
+                onClick={() => setActiveFileId(file.id)}
+                class={`px-3 py-1.5 rounded-md font-mono text-xs border transition-colors ${
+                  activeFile.id === file.id
+                    ? "border-orange-500/40 bg-orange-500/10 text-orange-400"
+                    : "border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:border-neutral-700"
+                }`}
+              >
+                {file.name}
+              </button>
+            ))}
+          </div>
+
+          <div class="rounded-lg border border-neutral-800/60 overflow-hidden">
+            <div
+              class="px-4 py-3 border-b border-neutral-800/60 flex flex-wrap items-center justify-between gap-2"
+              style="background: rgba(0,0,0,0.2);"
+            >
+              <code class="font-mono text-xs text-neutral-400 break-all">{activeFile.targetPath}</code>
+              <div class="flex items-center gap-2">
+                {copiedLabel && <span class="font-mono text-[10px] text-emerald-500">{copiedLabel}</span>}
+                <Button size="sm" variant="secondary" onClick={() => copyText(activeFile.targetPath, "path")}>
+                  Copy path
+                </Button>
+                <Button size="sm" onClick={() => copyText(activeFile.content, activeFile.name)}>
+                  Copy file
+                </Button>
+              </div>
+            </div>
+            <pre
+              class={`max-h-[55vh] overflow-auto p-4 text-xs leading-relaxed font-mono text-neutral-300 ${activeFile.languageClass}`}
+              style="background: rgba(0,0,0,0.35);"
+            >
+              {activeFile.content}
+            </pre>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -391,6 +528,7 @@ export function RepositoryPage() {
   const { params } = useRoute();
   const auth = useModel(AuthModel);
   const repos = useModel(RepositoriesModel);
+  const [actionFilesModalOpen, setActionFilesModalOpen] = useState(false);
 
   const repoId = params.id as string;
 
@@ -416,6 +554,7 @@ export function RepositoryPage() {
 
   return (
     <div class="min-h-screen bg-neutral-950 pt-14">
+      <ActionFilesModal open={actionFilesModalOpen} onClose={() => setActionFilesModalOpen(false)} />
       <div class="max-w-3xl mx-auto px-6 py-10 space-y-5">
         {/* Breadcrumb */}
         <div class="flex items-center gap-2 font-mono text-xs text-neutral-600">
@@ -433,51 +572,53 @@ export function RepositoryPage() {
 
         {/* Setup instructions */}
         <section class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
-          <div class="px-5 py-4 border-b border-neutral-800/60">
-            <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">GitHub Action setup</h2>
-            <p class="text-xs text-neutral-700 mt-1">
-              Store your API key as a GitHub secret named{" "}
-              <code class="font-mono text-neutral-500 bg-neutral-800/60 px-1 rounded">BORIS_API_KEY</code>.
-            </p>
+          <div class="px-5 py-4 border-b border-neutral-800/60 flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">GitHub Action setup</h2>
+              <p class="text-xs text-neutral-700 mt-1">
+                Store your API key as a GitHub secret named{" "}
+                <code class="font-mono text-neutral-500 bg-neutral-800/60 px-1 rounded">BORIS_API_KEY</code>.
+              </p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => setActionFilesModalOpen(true)}>
+              Copy action files
+            </Button>
           </div>
           <div class="p-5">
+            <p class="font-mono text-xs text-neutral-700 mb-3">
+              Add the action files to your repo (button above), then reference the local action in your workflow.
+            </p>
             <pre
               class="rounded-lg border border-neutral-800/60 p-4 text-xs text-neutral-400 overflow-x-auto font-mono leading-relaxed"
               style="background: rgba(0,0,0,0.3);"
             >{`name: Boris Bundle Tracker
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
 
 jobs:
   bundle-size:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - run: npm ci
-      - name: Build PR branch
-        run: npm run build
-
       - name: Collect sizes & report to Boris
-        uses: JoviDeCroock/boris-the-bundle-tracker/action@main
+        uses: ./.github/actions/boris-bundle-tracker
         with:
           api-key: \${{ secrets.BORIS_API_KEY }}
-          repository: ${repository ? `${repository.owner}/${repository.name}` : "owner/repo"}`}</pre>
-            <p class="font-mono text-xs text-neutral-700 mt-3">
-              See{" "}
-              <a
-                href="https://github.com/JoviDeCroock/boris-the-bundle-tracker/blob/main/docs/github-action.md"
-                class="text-orange-500/70 hover:text-orange-400 transition-colors"
-              >
-                docs/github-action.md
-              </a>{" "}
-              for the full reference.
-            </p>
+          # Optional:
+          # base-branch: main
+          # working-directory: .
+          # install-command: npm ci
+          # build-command: npm run build`}</pre>
           </div>
         </section>
       </div>
