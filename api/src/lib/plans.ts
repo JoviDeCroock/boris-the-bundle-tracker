@@ -6,10 +6,17 @@ type Plan = "free" | "pro";
 
 export const PLAN_LIMITS = {
   free: {
-    // Add your free plan limits here
+    /** Maximum number of repositories the user can link. */
+    repositories: 3,
+    /** Maximum number of API keys per repository. */
+    apiKeysPerRepo: 2,
+    /** How many days of evolution history are retained. */
+    historyDays: 30,
   },
   pro: {
-    // Add your pro plan limits here
+    repositories: 50,
+    apiKeysPerRepo: 10,
+    historyDays: 365,
   },
 } as const;
 
