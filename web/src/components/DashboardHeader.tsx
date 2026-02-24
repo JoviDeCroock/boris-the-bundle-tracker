@@ -28,12 +28,12 @@ export function DashboardHeader() {
           >
             Dashboard
           </a>
-          <a
+          {false && <a
             href="/billing"
             class="text-sm text-neutral-500 hover:text-white transition-colors px-3 py-1.5 rounded-md hover:bg-neutral-800/60"
           >
             Billing
-          </a>
+          </a>}
           <button
             onClick={handleSignOut}
             class="text-sm text-neutral-500 hover:text-white transition-colors px-3 py-1.5 rounded-md hover:bg-neutral-800/60 ml-1"
