@@ -9,12 +9,12 @@ type ButtonProps = JSX.IntrinsicElements["button"] & {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+    "text-white rounded-lg font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100",
   secondary:
     "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white rounded-lg transition-colors disabled:opacity-50",
-  ghost: "text-neutral-300 hover:text-white transition-colors disabled:opacity-50",
+  ghost: "text-neutral-400 hover:text-white transition-colors disabled:opacity-50",
   icon: "p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-700 transition-all cursor-pointer",
-  "danger-icon": "p-1.5 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer",
+  "danger-icon": "p-1.5 text-neutral-600 hover:text-red-400 transition-colors cursor-pointer",
 };
 
 const sizeClasses: Record<string, string> = {
@@ -32,8 +32,14 @@ export function Button({
   const isIconVariant = variant === "icon" || variant === "danger-icon";
   const sizeClass = isIconVariant ? "" : sizeClasses[size];
 
+  const isPrimary = variant === "primary";
+
   return (
-    <button class={`${variantClasses[variant]} ${sizeClass} ${className ?? ""}`.trim()} {...props}>
+    <button
+      class={`${variantClasses[variant]} ${sizeClass} ${className ?? ""}`.trim()}
+      style={isPrimary ? "background: #f97316;" : undefined}
+      {...props}
+    >
       {children}
     </button>
   );
