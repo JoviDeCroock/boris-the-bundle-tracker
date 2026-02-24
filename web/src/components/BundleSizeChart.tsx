@@ -1,6 +1,13 @@
 import { useSignal } from "@preact/signals";
 import type { PackageEvolution } from "../lib/api";
 
+const W = 760;
+const H = 260;
+const PAD_L = 64;
+const PAD_R = 16;
+const PAD_T = 16;
+const PAD_B = 56;
+
 type CompressionMode = "raw" | "gzip" | "brotli";
 
 interface TooltipState {
@@ -88,12 +95,6 @@ export function BundleSizeChart({ evolutions }: Props) {
   if (fileKeys.length === 0) return null;
 
   // Chart layout constants
-  const W = 760;
-  const H = 260;
-  const PAD_L = 64;
-  const PAD_R = 16;
-  const PAD_T = 16;
-  const PAD_B = 56;
   const PW = W - PAD_L - PAD_R;
   const PH = H - PAD_T - PAD_B;
 
@@ -268,7 +269,7 @@ export function BundleSizeChart({ evolutions }: Props) {
                   stroke-linejoin="round"
                 />
                 {/* Dots */}
-                {points.map((p, i) => (
+                {points.map((p, i) => p && (
                   <circle
                     key={i}
                     cx={p.x}
@@ -296,50 +297,7 @@ export function BundleSizeChart({ evolutions }: Props) {
           })}
 
           {/* Tooltip */}
-          {tooltip &&
-            (() => {
-              const TW = 180;
-              const TH = tooltip.value?.prTitle ? 44 : 30;
-              const tx = Math.min(tooltip.value.x + 10, W - TW - 4);
-              const ty = Math.max(tooltip.value.y - TH - 8, 4);
-              return (
-                <g style="pointer-events: none;">
-                  <rect
-                    x={tx}
-                    y={ty}
-                    width={TW}
-                    height={TH}
-                    rx="4"
-                    fill="#1c1c1e"
-                    stroke="rgba(255,255,255,0.1)"
-                    stroke-width="0.5"
-                  />
-                  <text
-                    x={tx + 8}
-                    y={ty + 13}
-                    fill="#d4d4d4"
-                    font-family="ui-monospace,monospace"
-                    font-size="10"
-                    font-weight="600"
-                  >
-                    #{tooltip.value.prNumber} · {formatBytes(tooltip.value.size)}
-                  </text>
-                  {tooltip.value?.prTitle && (
-                    <text
-                      x={tx + 8}
-                      y={ty + 29}
-                      fill="#737373"
-                      font-family="ui-monospace,monospace"
-                      font-size="9"
-                    >
-                      {tooltip.value.prTitle.length > 22
-                        ? tooltip.value.prTitle.slice(0, 22) + "…"
-                        : tooltip.value.prTitle}
-                    </text>
-                  )}
-                </g>
-              );
-            })()}
+          {tooltip.value && <Tooltip tooltip={tooltip.value} />}
         </svg>
       </div>
 
@@ -371,3 +329,48 @@ export function BundleSizeChart({ evolutions }: Props) {
     </div>
   );
 }
+
+
+const Tooltip = ({ tooltip }: { tooltip: TooltipState }) => {
+  const TW = 180;
+  const TH = tooltip.prTitle ? 44 : 30;
+  const tx = Math.min(tooltip.x + 10, W - TW - 4);
+  const ty = Math.max(tooltip.y - TH - 8, 4);
+  return (
+    <g style="pointer-events: none;">
+      <rect
+        x={tx}
+        y={ty}
+        width={TW}
+        height={TH}
+        rx="4"
+        fill="#1c1c1e"
+        stroke="rgba(255,255,255,0.1)"
+        stroke-width="0.5"
+      />
+      <text
+        x={tx + 8}
+        y={ty + 13}
+        fill="#d4d4d4"
+        font-family="ui-monospace,monospace"
+        font-size="10"
+        font-weight="600"
+      >
+        #{tooltip.prNumber} · {formatBytes(tooltip.size)}
+      </text>
+      {tooltip.prTitle && (
+        <text
+          x={tx + 8}
+          y={ty + 29}
+          fill="#737373"
+          font-family="ui-monospace,monospace"
+          font-size="9"
+        >
+          {tooltip.prTitle.length > 22
+            ? tooltip.prTitle.slice(0, 22) + "…"
+            : tooltip.prTitle}
+        </text>
+      )}
+    </g>
+  );
+};
