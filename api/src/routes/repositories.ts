@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Bindings, Variables } from "../types";
+import { getUserPlan, PLAN_LIMITS } from "../lib/plans";
 
 export const repositories = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -54,6 +55,24 @@ repositories.post("/", async (c) => {
   const validIdent = /^[\w.\-]+$/;
   if (!validIdent.test(owner) || !validIdent.test(name)) {
     return c.json({ error: "owner and name must be valid GitHub identifiers" }, 400);
+  }
+
+  // Enforce plan repository limit
+  const plan = await getUserPlan(db, userId);
+  const limit = PLAN_LIMITS[plan].repositories;
+  const countResult = await db
+    .select({ count: count() })
+    .from(schema.userRepository)
+    .where(eq(schema.userRepository.userId, userId))
+    .get();
+  const repoCount = countResult?.count ?? 0;
+  if (repoCount >= limit) {
+    return c.json(
+      {
+        error: `Repository limit reached. Your ${plan} plan allows up to ${limit} repositories. Upgrade to add more.`,
+      },
+      403,
+    );
   }
 
   const now = new Date();

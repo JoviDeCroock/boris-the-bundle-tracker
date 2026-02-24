@@ -111,6 +111,10 @@ export interface PackageEvolution {
   fileName: string;
   mainSize: number;
   prSize: number;
+  gzipMainSize: number | null;
+  gzipPrSize: number | null;
+  brotliMainSize: number | null;
+  brotliPrSize: number | null;
   reportedAt: string;
 }
 

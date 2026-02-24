@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const zlib = require("node:zlib");
 const { execSync } = require("node:child_process");
 
 function getInput(name, fallback = "") {
@@ -159,6 +160,20 @@ function resolveBuildCommand(workingDir, defaultBuild) {
   return defaultBuild;
 }
 
+/** Measure raw, gzip, and brotli sizes for a single output file. */
+function measureFileSizes(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return { rawSize: 0, gzipSize: 0, brotliSize: 0 };
+  }
+  const content = fs.readFileSync(filePath);
+  const rawSize = content.length;
+  const gzipSize = zlib.gzipSync(content, { level: 9 }).length;
+  const brotliSize = zlib.brotliCompressSync(content, {
+    params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
+  }).length;
+  return { rawSize, gzipSize, brotliSize };
+}
+
 function collectSnapshot(rootDir) {
   const packages = [];
   for (const entry of findPackages(rootDir)) {
@@ -168,17 +183,15 @@ function collectSnapshot(rootDir) {
     const exportGroups = new Map();
     for (const exp of exportsList) {
       const filePath = path.join(entry.packageDir, exp.file);
-      let size = 0;
-      if (fs.existsSync(filePath)) {
-        size = fs.statSync(filePath).size;
-      } else {
+      const sizes = measureFileSizes(filePath);
+      if (sizes.rawSize === 0 && !fs.existsSync(filePath)) {
         console.warn(
           `::warning::Missing output file for ${entry.pkg.name || entry.relDir || "."}: ${exp.file}`,
         );
       }
 
       if (!exportGroups.has(exp.exportPath)) exportGroups.set(exp.exportPath, []);
-      exportGroups.get(exp.exportPath).push({ file: exp.file, size });
+      exportGroups.get(exp.exportPath).push({ file: exp.file, ...sizes });
     }
 
     packages.push({
@@ -191,7 +204,7 @@ function collectSnapshot(rootDir) {
   return packages;
 }
 
-function flattenByPackage(snapshot, label) {
+function flattenByPackage(snapshot, isMain) {
   const map = new Map();
   for (const pkg of snapshot) {
     for (const exp of pkg.exports) {
@@ -204,8 +217,20 @@ function flattenByPackage(snapshot, label) {
           file: file.file,
           mainSize: 0,
           prSize: 0,
+          gzipMainSize: 0,
+          gzipPrSize: 0,
+          brotliMainSize: 0,
+          brotliPrSize: 0,
         };
-        existing[label] = file.size;
+        if (isMain) {
+          existing.mainSize = file.rawSize;
+          existing.gzipMainSize = file.gzipSize;
+          existing.brotliMainSize = file.brotliSize;
+        } else {
+          existing.prSize = file.rawSize;
+          existing.gzipPrSize = file.gzipSize;
+          existing.brotliPrSize = file.brotliSize;
+        }
         map.set(key, existing);
       }
     }
@@ -214,14 +239,16 @@ function flattenByPackage(snapshot, label) {
 }
 
 function mergeSnapshots(mainSnapshot, prSnapshot) {
-  const mainMap = flattenByPackage(mainSnapshot, "mainSize");
-  const prMap = flattenByPackage(prSnapshot, "prSize");
+  const mainMap = flattenByPackage(mainSnapshot, true);
+  const prMap = flattenByPackage(prSnapshot, false);
 
   const merged = new Map(mainMap);
   for (const [key, value] of prMap.entries()) {
     const existing = merged.get(key);
     if (existing) {
       existing.prSize = value.prSize;
+      existing.gzipPrSize = value.gzipPrSize;
+      existing.brotliPrSize = value.brotliPrSize;
     } else {
       merged.set(key, value);
     }
@@ -243,6 +270,10 @@ function mergeSnapshots(mainSnapshot, prSnapshot) {
       file: value.file,
       mainSize: value.mainSize,
       prSize: value.prSize,
+      gzipMainSize: value.gzipMainSize,
+      gzipPrSize: value.gzipPrSize,
+      brotliMainSize: value.brotliMainSize,
+      brotliPrSize: value.brotliPrSize,
     });
   }
 

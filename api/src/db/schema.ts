@@ -151,6 +151,10 @@ export const packageEvolution = sqliteTable(
     fileName: text("file_name").notNull(), // e.g. "dist/index.js"
     mainSize: integer("main_size").notNull(), // bytes on base branch
     prSize: integer("pr_size").notNull(), // bytes on PR branch
+    gzipMainSize: integer("gzip_main_size"), // gzip bytes on base branch
+    gzipPrSize: integer("gzip_pr_size"), // gzip bytes on PR branch
+    brotliMainSize: integer("brotli_main_size"), // brotli bytes on base branch
+    brotliPrSize: integer("brotli_pr_size"), // brotli bytes on PR branch
     reportedAt: integer("reported_at", { mode: "timestamp" }).notNull(),
   },
   (t) => [
