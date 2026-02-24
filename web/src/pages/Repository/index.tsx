@@ -1,4 +1,4 @@
-import { useEffect } from "preact/hooks";
+import { useEffect, useMemo } from "preact/hooks";
 import { useLocation, useRoute } from "preact-iso";
 import { useModel, useSignal } from "@preact/signals";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -401,17 +401,23 @@ function EvolutionsTable({
   repoId: string;
   packageId: string;
 }) {
-  // Group by PR and keep only the latest measurement for each file in that PR.
-  const byPr = new Map<number, Map<string, PackageEvolution>>();
-  for (const ev of evolutions) {
-    const key = `${ev.exportPath}::${ev.fileName}`;
-    const files = byPr.get(ev.prNumber) ?? new Map<string, PackageEvolution>();
-    const existing = files.get(key);
-    if (!existing || new Date(ev.reportedAt).getTime() > new Date(existing.reportedAt).getTime()) {
-      files.set(key, ev);
+  console.log('EvolutionsTable render', { evolutions });
+
+  const byPr = useMemo(() => {
+    // Group by PR and keep only the latest measurement for each file in that PR.
+    const byPr = new Map<number, Map<string, PackageEvolution>>();
+    for (const ev of evolutions) {
+      const key = `${ev.exportPath}::${ev.fileName}`;
+      const files = byPr.get(ev.prNumber) ?? new Map<string, PackageEvolution>();
+      const existing = files.get(key);
+      if (!existing || new Date(ev.reportedAt).getTime() > new Date(existing.reportedAt).getTime()) {
+        files.set(key, ev);
+      }
+      byPr.set(ev.prNumber, files);
     }
-    byPr.set(ev.prNumber, files);
-  }
+    return byPr;
+  }, [evolutions]);
+
 
   const queryClient = useQueryClient();
   const updatingPr = useSignal<number | null>(null);
@@ -571,6 +577,7 @@ function PackagesPanel({
     queryFn: () => getPackageEvolutions(repoId, expandedId.value as string),
     enabled: Boolean(repoId && expandedId.value),
   });
+  console.log("PackagesPanel render", { packages: packagesQuery.data, evolutions: evolutionsQuery.data });
 
   const removePackageMutation = useMutation({
     mutationFn: (packageId: string) => deletePackage(repoId, packageId),
@@ -580,6 +587,7 @@ function PackagesPanel({
   });
 
   function handleExpand(packageId: string) {
+    console.log("handleExpand", { packageId, currentExpanded: expandedId.value });
     if (expandedId.value === packageId) {
       expandedId.value = null;
       return;
