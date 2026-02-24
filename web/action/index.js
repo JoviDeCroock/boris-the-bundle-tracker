@@ -414,6 +414,31 @@ async function main() {
     throw new Error("Missing required GitHub metadata");
   }
 
+  // On pull_request closed events the PR has been merged or closed without a
+  // merge.  There is nothing to build — we just update the stored state so
+  // that the UI can show the PR as merged/closed.
+  if (event.action === "closed") {
+    const payload = { repository, prNumber, prMerged, prState };
+    const endpoint = `${apiUrl.replace(/\/$/, "")}/api/report`;
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const bodyText = await response.text();
+    if (!response.ok) {
+      throw new Error(`Boris API request failed (${response.status}): ${bodyText}`);
+    }
+
+    setOutput("records-created", 0);
+    console.log(`Reported PR #${prNumber} as ${prMerged ? "merged" : "closed"} to Boris.`);
+    return;
+  }
+
   run(installCommand, workingDirectory);
   run(buildCommand, workingDirectory);
   const prSnapshot = collectSnapshot(workingDirectory);
