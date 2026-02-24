@@ -3,6 +3,11 @@
 @theme {
   --font-sans: "Syne", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* Syne has tall descenders — increase paired line-heights for small sizes */
+  --text-xs--line-height: 1.25rem;
+  --text-sm--line-height: 1.5rem;
+  --text-base--line-height: 1.75rem;
 }
 
 html {
@@ -13,6 +18,12 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* Syne has aggressive vertical metrics — ensure descenders are never clipped */
+button, a {
+  line-height: inherit;
 }
 
 #app {

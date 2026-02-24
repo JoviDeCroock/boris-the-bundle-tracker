@@ -54,14 +54,14 @@ function Hero({ onGetStarted }: { onGetStarted: () => void }) {
             <div class="anim-3 flex flex-wrap gap-3">
               <button
                 onClick={onGetStarted}
-                class="px-6 py-3 rounded-lg font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                class="px-6 py-3 rounded-lg font-semibold leading-normal text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style="background: #f97316; box-shadow: 0 0 24px rgba(249,115,22,0.3);"
               >
                 Start tracking free
               </button>
               <a
                 href="#how-it-works"
-                class="px-6 py-3 rounded-lg border border-neutral-700 text-neutral-300 font-medium hover:border-neutral-500 hover:text-white transition-colors"
+                class="px-6 py-3 rounded-lg border leading-normal border-neutral-700 text-neutral-300 font-medium hover:border-neutral-500 hover:text-white transition-colors"
               >
                 How it works ↓
               </a>

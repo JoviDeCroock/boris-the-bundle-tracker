@@ -58,7 +58,7 @@ export function Header() {
           ))}
           <a
             href={auth.authenticated.value ? "/dashboard" : "/auth"}
-            class="text-sm font-semibold px-4 py-2 rounded-lg text-white transition-all hover:scale-[1.02]"
+            class="text-sm font-semibold leading-normal px-4 py-2 rounded-lg text-white transition-all hover:scale-[1.02]"
             style="background: #f97316;"
           >
             {auth.authenticated.value ? "Dashboard" : "Sign in"}
@@ -96,7 +96,7 @@ export function Header() {
           ))}
           <a
             href={auth.authenticated.value ? "/dashboard" : "/auth"}
-            class="text-sm font-semibold px-4 py-2.5 rounded-lg text-white text-center"
+            class="text-sm font-semibold leading-normal px-4 py-2.5 rounded-lg text-white text-center"
             style="background: #f97316;"
             onClick={() => (mobileOpen.value = false)}
           >
