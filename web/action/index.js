@@ -112,6 +112,33 @@ function findPackages(rootDir) {
   return selected;
 }
 
+/**
+ * Normalizes filenames that contain build-time content hashes so that the same
+ * logical file can be matched across builds even when the hash changes.
+ *
+ * Detected as a hash: a separator-delimited segment of 8–20 alphanumeric chars
+ * that is either pure-hex, contains both letters and digits, or has mixed case
+ * (covers webpack hex hashes, Vite base64url hashes, Rollup, CRA, Next.js, …).
+ *
+ * Examples:
+ *   dist/index.abc12345.js      → dist/index.[hash].js
+ *   assets/index-DiwrgTda.js    → assets/index-[hash].js
+ *   dist/main.a1b2c3d4.chunk.js → dist/main.[hash].chunk.js
+ */
+function normalizeHashedFilename(filename) {
+  return filename
+    .split("/")
+    .map((segment) =>
+      segment.replace(/([.-])([a-zA-Z0-9]{8,20})(?=[.-]|$)/g, (match, sep, hash) => {
+        const isPureHex = /^[0-9a-f]+$/i.test(hash);
+        const hasBothLetterAndDigit = /[a-zA-Z]/.test(hash) && /[0-9]/.test(hash);
+        const hasMixedCase = /[a-z]/.test(hash) && /[A-Z]/.test(hash);
+        return isPureHex || hasBothLetterAndDigit || hasMixedCase ? `${sep}[hash]` : match;
+      }),
+    )
+    .join("/");
+}
+
 function collectExportFiles(node, exportPath, out) {
   if (typeof node === "string") {
     if (node.startsWith("./")) out.push({ exportPath, file: node.slice(2) });
@@ -262,12 +289,13 @@ function flattenByPackage(snapshot, isMain) {
   for (const pkg of snapshot) {
     for (const exp of pkg.exports) {
       for (const file of exp.files) {
-        const key = [pkg.name, pkg.path || "", exp.exportPath, file.file].join("::");
+        const normalizedFile = normalizeHashedFilename(file.file);
+        const key = [pkg.name, pkg.path || "", exp.exportPath, normalizedFile].join("::");
         const existing = map.get(key) || {
           packageName: pkg.name,
           packagePath: pkg.path,
           exportPath: exp.exportPath,
-          file: file.file,
+          file: normalizedFile,
           mainSize: 0,
           prSize: 0,
           gzipMainSize: 0,
