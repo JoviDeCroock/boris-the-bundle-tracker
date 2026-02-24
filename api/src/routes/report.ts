@@ -27,6 +27,8 @@ interface ReportPayload {
   prTitle?: string;
   branch: string;
   commitSha: string;
+  prMerged?: boolean;
+  prState?: "open" | "closed";
   packages: Array<{
     name: string;
     /** Relative path within a monorepo, e.g. "packages/ui". Optional. */
@@ -87,10 +89,22 @@ report.post("/", async (c) => {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
-  const { repository: repoSlug, prNumber, prTitle, branch, commitSha, packages } = body;
+  const {
+    repository: repoSlug,
+    prNumber,
+    prTitle,
+    branch,
+    commitSha,
+    prMerged,
+    prState,
+    packages,
+  } = body;
 
   if (!repoSlug || !prNumber || !branch || !commitSha || !Array.isArray(packages)) {
-    return c.json({ error: "Missing required fields: repository, prNumber, branch, commitSha, packages" }, 400);
+    return c.json(
+      { error: "Missing required fields: repository, prNumber, branch, commitSha, packages" },
+      400,
+    );
   }
 
   // Validate "owner/name" format
@@ -167,6 +181,8 @@ report.post("/", async (c) => {
           prTitle: prTitle ?? null,
           branch,
           commitSha,
+          prMerged: Boolean(prMerged),
+          prState: prState === "closed" ? "closed" : "open",
           exportPath: exp.exportPath,
           fileName: fileEntry.file,
           mainSize: fileEntry.mainSize,

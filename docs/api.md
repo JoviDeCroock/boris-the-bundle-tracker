@@ -72,10 +72,10 @@ Both fields must be valid GitHub identifiers (alphanumeric, `-`, `_`, `.`).
 
 **Errors**
 
-| Status | Reason |
-|---|---|
-| 400 | Missing or invalid fields |
-| 409 | Repository already linked to your account |
+| Status | Reason                                    |
+| ------ | ----------------------------------------- |
+| 400    | Missing or invalid fields                 |
+| 409    | Repository already linked to your account |
 
 ---
 
@@ -217,6 +217,8 @@ Returns size records ordered by `reportedAt` descending (newest first).
       "prTitle": "feat: add dark mode",
       "branch": "feat/dark-mode",
       "commitSha": "abc1234",
+      "prMerged": false,
+      "prState": "open",
       "exportPath": ".",
       "fileName": "dist/index.js",
       "mainSize": 10240,
@@ -264,6 +266,8 @@ Content-Type: application/json
   "prTitle": "feat: add dark mode",
   "branch": "feat/dark-mode",
   "commitSha": "abc1234def5678",
+  "prMerged": false,
+  "prState": "open",
   "packages": [
     {
       "name": "@acme/ui",
@@ -272,15 +276,13 @@ Content-Type: application/json
         {
           "exportPath": ".",
           "files": [
-            { "file": "dist/index.js",  "mainSize": 10240, "prSize": 10850 },
-            { "file": "dist/index.mjs", "mainSize": 9600,  "prSize": 10100 }
+            { "file": "dist/index.js", "mainSize": 10240, "prSize": 10850 },
+            { "file": "dist/index.mjs", "mainSize": 9600, "prSize": 10100 }
           ]
         },
         {
           "exportPath": "./client",
-          "files": [
-            { "file": "dist/client.js", "mainSize": 5120, "prSize": 5200 }
-          ]
+          "files": [{ "file": "dist/client.js", "mainSize": 5120, "prSize": 5200 }]
         }
       ]
     }
@@ -288,19 +290,21 @@ Content-Type: application/json
 }
 ```
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `repository` | string | yes | `owner/name` matching the API key's repository |
-| `prNumber` | integer | yes | GitHub pull request number |
-| `prTitle` | string | no | Human-readable PR title |
-| `branch` | string | yes | Feature branch name |
-| `commitSha` | string | yes | Full or short commit SHA |
-| `packages[].name` | string | yes | Package name from `package.json` |
-| `packages[].path` | string | no | Relative path in monorepo |
-| `packages[].exports[].exportPath` | string | yes | Export map key |
-| `packages[].exports[].files[].file` | string | yes | Relative output file path |
-| `packages[].exports[].files[].mainSize` | integer | yes | Bytes on base branch |
-| `packages[].exports[].files[].prSize` | integer | yes | Bytes on PR branch |
+| Field                                   | Type    | Required | Notes                                                |
+| --------------------------------------- | ------- | -------- | ---------------------------------------------------- |
+| `repository`                            | string  | yes      | `owner/name` matching the API key's repository       |
+| `prNumber`                              | integer | yes      | GitHub pull request number                           |
+| `prTitle`                               | string  | no       | Human-readable PR title                              |
+| `branch`                                | string  | yes      | Feature branch name                                  |
+| `commitSha`                             | string  | yes      | Full or short commit SHA                             |
+| `prMerged`                              | boolean | no       | Whether GitHub marks the PR as merged at report time |
+| `prState`                               | string  | no       | `open` or `closed` as reported by GitHub             |
+| `packages[].name`                       | string  | yes      | Package name from `package.json`                     |
+| `packages[].path`                       | string  | no       | Relative path in monorepo                            |
+| `packages[].exports[].exportPath`       | string  | yes      | Export map key                                       |
+| `packages[].exports[].files[].file`     | string  | yes      | Relative output file path                            |
+| `packages[].exports[].files[].mainSize` | integer | yes      | Bytes on base branch                                 |
+| `packages[].exports[].files[].prSize`   | integer | yes      | Bytes on PR branch                                   |
 
 ### Response 200
 
@@ -310,8 +314,8 @@ Content-Type: application/json
 
 ### Errors
 
-| Status | Reason |
-|---|---|
-| 400 | Missing required fields or invalid JSON |
-| 401 | Missing, malformed, or unknown API key |
-| 403 | API key does not belong to the specified repository |
+| Status | Reason                                              |
+| ------ | --------------------------------------------------- |
+| 400    | Missing required fields or invalid JSON             |
+| 401    | Missing, malformed, or unknown API key              |
+| 403    | API key does not belong to the specified repository |

@@ -145,6 +145,8 @@ export const packageEvolution = sqliteTable(
     prTitle: text("pr_title"),
     branch: text("branch").notNull(),
     commitSha: text("commit_sha").notNull(),
+    prMerged: integer("pr_merged", { mode: "boolean" }).notNull().default(false),
+    prState: text("pr_state").notNull().default("open"),
     exportPath: text("export_path").notNull(), // e.g. "." or "./client"
     fileName: text("file_name").notNull(), // e.g. "dist/index.js"
     mainSize: integer("main_size").notNull(), // bytes on base branch

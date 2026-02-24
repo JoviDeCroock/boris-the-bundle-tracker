@@ -15,6 +15,13 @@
       "when": 1740355200000,
       "tag": "0001_boris_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1771918584885,
+      "tag": "0002_pr_merge_status",
+      "breakpoints": true
     }
   ]
 }
