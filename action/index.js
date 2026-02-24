@@ -151,6 +151,36 @@ function parseExports(exportsField) {
   return [...uniq.values()];
 }
 
+function detectPackageManager(dir) {
+  if (
+    fs.existsSync(path.join(dir, "pnpm-lock.yaml")) ||
+    fs.existsSync(path.join(dir, "pnpm-workspace.yaml"))
+  ) {
+    return "pnpm";
+  }
+  if (fs.existsSync(path.join(dir, "yarn.lock"))) {
+    return "yarn";
+  }
+  if (fs.existsSync(path.join(dir, "bun.lockb"))) {
+    return "bun";
+  }
+  return "npm";
+}
+
+function defaultInstallCommand(pm) {
+  if (pm === "pnpm") return "pnpm install";
+  if (pm === "yarn") return "yarn install";
+  if (pm === "bun") return "bun install";
+  return "npm ci";
+}
+
+function defaultBuildCommand(pm) {
+  if (pm === "pnpm") return "pnpm run build";
+  if (pm === "yarn") return "yarn build";
+  if (pm === "bun") return "bun run build";
+  return "npm run build";
+}
+
 function resolveBuildCommand(workingDir, defaultBuild) {
   const script = path.join(workingDir, ".boris-build.sh");
   if (fs.existsSync(script)) {
@@ -295,10 +325,12 @@ async function main() {
   const apiUrl = "https://boris-api.resynapse.dev";
   const baseBranchInput = getInput("base-branch", "main");
   const workingDirectory = path.resolve(getInput("working-directory", "."));
-  const installCommand = getInput("install-command", "npm ci");
+  const pm = detectPackageManager(workingDirectory);
+  console.log(`Detected package manager: ${pm}`);
+  const installCommand = getInput("install-command") || defaultInstallCommand(pm);
   const buildCommand = resolveBuildCommand(
     workingDirectory,
-    getInput("build-command", "npm run build"),
+    getInput("build-command") || defaultBuildCommand(pm),
   );
 
   console.log('apiKey', apiKey ? '***' : '(not set)');
