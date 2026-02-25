@@ -18,7 +18,7 @@ export function AddRepositoryCard({
 }: AddRepositoryCardProps) {
   return (
     <div class="rounded-xl border border-neutral-800 p-5 mb-5" style="background: #111113;">
-      <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider mb-3">Add repository</h2>
+      <h2 class="text-xs font-mono text-neutral-400 uppercase tracking-wider mb-3">Add repository</h2>
       <form onSubmit={onSubmit} class="flex gap-2">
         <Input
           type="text"
