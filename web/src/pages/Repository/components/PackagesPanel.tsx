@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../../components/ui/Button";
 import { BundleSizeChart } from "../../../components/BundleSizeChart";
 import { deletePackage, getPackageEvolutions, listPackages } from "../../../lib/api";
-import type { Repository } from "../../../lib/api";
+import type { PackageEvolutionPullRequest, Repository } from "../../../lib/api";
 import { EvolutionsTable } from "./EvolutionsTable";
+
+const PAGE_LIMIT = 30;
 
 type PackagesPanelProps = {
   repoId: string;
@@ -14,6 +16,10 @@ type PackagesPanelProps = {
 export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
   const queryClient = useQueryClient();
   const expandedId = useSignal<string | null>(null);
+  // Accumulated pages of pull requests per expanded package
+  const accumulatedPrs = useSignal<PackageEvolutionPullRequest[]>([]);
+  const nextCursor = useSignal<number | null>(null);
+  const loadingMore = useSignal(false);
 
   const packagesQuery = useQuery({
     queryKey: ["repositories", repoId, "packages"],
@@ -23,9 +29,31 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
 
   const evolutionsQuery = useQuery({
     queryKey: ["repositories", repoId, "packages", expandedId.value, "evolutions"],
-    queryFn: () => getPackageEvolutions(repoId, expandedId.value as string),
+    queryFn: async () => {
+      const data = await getPackageEvolutions(repoId, expandedId.value as string, {
+        limit: PAGE_LIMIT,
+      });
+      accumulatedPrs.value = data.pullRequests;
+      nextCursor.value = data.nextCursor;
+      return data;
+    },
     enabled: Boolean(repoId && expandedId.value),
   });
+
+  async function handleLoadMore() {
+    if (!expandedId.value || nextCursor.value == null) return;
+    loadingMore.value = true;
+    try {
+      const data = await getPackageEvolutions(repoId, expandedId.value, {
+        limit: PAGE_LIMIT,
+        cursor: nextCursor.value,
+      });
+      accumulatedPrs.value = [...accumulatedPrs.value, ...data.pullRequests];
+      nextCursor.value = data.nextCursor;
+    } finally {
+      loadingMore.value = false;
+    }
+  }
 
   const removePackageMutation = useMutation({
     mutationFn: (packageId: string) => deletePackage(repoId, packageId),
@@ -37,8 +65,12 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
   function handleExpand(packageId: string) {
     if (expandedId.value === packageId) {
       expandedId.value = null;
+      accumulatedPrs.value = [];
+      nextCursor.value = null;
       return;
     }
+    accumulatedPrs.value = [];
+    nextCursor.value = null;
     expandedId.value = packageId;
   }
 
@@ -127,17 +159,13 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
                     </div>
                   ) : (
                     <>
-                      {(evolutionsQuery.data?.pullRequests ?? []).some(
-                        (pullRequest) => pullRequest.prMerged,
-                      ) && (
+                      {accumulatedPrs.value.some((pr) => pr.prMerged) && (
                         <div
                           class="rounded-lg border border-neutral-800/60 p-4"
                           style="background: rgba(0,0,0,0.2);"
                         >
                           <BundleSizeChart
-                            evolutions={(evolutionsQuery.data?.pullRequests ?? []).flatMap(
-                              (pullRequest) => pullRequest.evolutions,
-                            )}
+                            evolutions={accumulatedPrs.value.flatMap((pr) => pr.evolutions)}
                           />
                         </div>
                       )}
@@ -146,11 +174,23 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
                         style="background: rgba(0,0,0,0.2);"
                       >
                         <EvolutionsTable
-                          pullRequests={evolutionsQuery.data?.pullRequests ?? []}
+                          pullRequests={accumulatedPrs.value}
                           repository={repository}
                           repoId={repoId}
                           packageId={pkg.id}
                         />
+                        {nextCursor.value != null && (
+                          <div class="mt-3 flex justify-center">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={handleLoadMore}
+                              disabled={loadingMore.value}
+                            >
+                              {loadingMore.value ? "Loading…" : "Load more"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
