@@ -55,23 +55,24 @@ packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
     return c.json({ error: "Repository not found" }, 404);
   }
 
-  // Verify the package belongs to this repository
-  const pkg = await db
-    .select()
-    .from(schema.package_)
-    .where(and(eq(schema.package_.id, packageId), eq(schema.package_.repositoryId, repoId)))
-    .get();
+  const [pkg, allEvolutions] = await Promise.all([
+    // Verify the package belongs to this repository
+    db
+      .select()
+      .from(schema.package_)
+      .where(and(eq(schema.package_.id, packageId), eq(schema.package_.repositoryId, repoId)))
+      .get(),
+    db
+      .select()
+      .from(schema.packageEvolution)
+      .where(eq(schema.packageEvolution.packageId, packageId))
+      .orderBy(desc(schema.packageEvolution.reportedAt))
+      .all(),
+  ]);
 
   if (!pkg) {
     return c.json({ error: "Package not found" }, 404);
   }
-
-  const allEvolutions = await db
-    .select()
-    .from(schema.packageEvolution)
-    .where(eq(schema.packageEvolution.packageId, packageId))
-    .orderBy(desc(schema.packageEvolution.reportedAt))
-    .all();
 
   const latestCommitByPr = new Map<number, string>();
   const pullRequestsByNumber = new Map<
