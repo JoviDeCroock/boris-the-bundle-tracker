@@ -118,6 +118,17 @@ export interface PackageEvolution {
   reportedAt: string;
 }
 
+export interface PackageEvolutionPullRequest {
+  prNumber: number;
+  prTitle: string | null;
+  branch: string;
+  commitSha: string;
+  prMerged: boolean;
+  prState: "open" | "closed";
+  reportedAt: string;
+  evolutions: PackageEvolution[];
+}
+
 export async function listPackages(repoId: string): Promise<Package[]> {
   const res = await fetchApi<{ packages: Package[] }>(`/api/v1/repositories/${repoId}/packages`);
   return res.packages;
@@ -126,7 +137,7 @@ export async function listPackages(repoId: string): Promise<Package[]> {
 export async function getPackageEvolutions(
   repoId: string,
   packageId: string,
-): Promise<{ package: Package; evolutions: PackageEvolution[] }> {
+): Promise<{ package: Package; pullRequests: PackageEvolutionPullRequest[] }> {
   return fetchApi(`/api/v1/repositories/${repoId}/packages/${packageId}/evolutions`);
 }
 
@@ -146,7 +157,11 @@ export async function updateEvolution(
   });
 }
 
-export async function deleteEvolution(repoId: string, packageId: string, prNumber: number): Promise<void> {
+export async function deleteEvolution(
+  repoId: string,
+  packageId: string,
+  prNumber: number,
+): Promise<void> {
   await fetchApi(`/api/v1/repositories/${repoId}/packages/${packageId}/evolutions/${prNumber}`, {
     method: "DELETE",
   });
