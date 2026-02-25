@@ -202,10 +202,10 @@ function defaultInstallCommand(pm) {
 }
 
 function defaultBuildCommand(pm) {
-  if (pm === "pnpm") return "pnpm run build";
-  if (pm === "yarn") return "yarn build";
-  if (pm === "bun") return "bun run build";
-  return "npm run build";
+  if (pm === "pnpm") return "pnpm run build --if-present";
+  if (pm === "yarn") return "yarn build --if-present";
+  if (pm === "bun") return "bun run build --if-present";
+  return "npm run build --if-present";
 }
 
 /**
