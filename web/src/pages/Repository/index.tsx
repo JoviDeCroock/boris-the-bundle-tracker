@@ -85,6 +85,7 @@ export function RepositoryPage() {
         <SetupInstructionsPanel
           packageCount={packageCount.value}
           setupExpanded={setupExpanded.value}
+          repository={repository}
           onOpenActionFilesModal={() => (actionFilesModalOpen.value = true)}
           onToggleExpanded={() => (setupExpanded.value = !setupExpanded.value)}
         />

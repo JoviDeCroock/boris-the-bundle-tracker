@@ -137,8 +137,15 @@ export async function listPackages(repoId: string): Promise<Package[]> {
 export async function getPackageEvolutions(
   repoId: string,
   packageId: string,
-): Promise<{ package: Package; pullRequests: PackageEvolutionPullRequest[] }> {
-  return fetchApi(`/api/v1/repositories/${repoId}/packages/${packageId}/evolutions`);
+  options: { limit?: number; cursor?: number } = {},
+): Promise<{ package: Package; pullRequests: PackageEvolutionPullRequest[]; nextCursor: number | null }> {
+  const params = new URLSearchParams();
+  if (options.limit != null) params.set("limit", String(options.limit));
+  if (options.cursor != null) params.set("cursor", String(options.cursor));
+  const qs = params.toString();
+  return fetchApi(
+    `/api/v1/repositories/${repoId}/packages/${packageId}/evolutions${qs ? `?${qs}` : ""}`,
+  );
 }
 
 export async function deletePackage(repoId: string, packageId: string): Promise<void> {

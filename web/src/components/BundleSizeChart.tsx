@@ -21,6 +21,9 @@ interface TooltipState {
 
 interface Props {
   evolutions: PackageEvolution[];
+  /** Controlled compression mode. When provided the chart reflects the parent's selection. */
+  compressionMode?: CompressionMode;
+  onCompressionModeChange?: (mode: CompressionMode) => void;
 }
 
 const COLORS = [
@@ -55,8 +58,12 @@ function niceAxisMax(rawMax: number): number {
   return nice * magnitude;
 }
 
-export function BundleSizeChart({ evolutions }: Props) {
-  const mode = useSignal<CompressionMode>("gzip");
+export function BundleSizeChart({ evolutions, compressionMode, onCompressionModeChange }: Props) {
+  const internalMode = useSignal<CompressionMode>("gzip");
+  // Use controlled mode when provided, otherwise fall back to internal signal
+  const mode = compressionMode !== undefined
+    ? { value: compressionMode }
+    : internalMode;
   const tooltip = useSignal<TooltipState | null>(null);
 
   // Only show merged PRs, deduplicated to latest measurement per (prNumber, file key)
@@ -138,7 +145,13 @@ export function BundleSizeChart({ evolutions }: Props) {
           {(["raw", "gzip", "brotli"] as CompressionMode[]).map((m) => (
             <button
               key={m}
-              onClick={() => (mode.value = m)}
+              onClick={() => {
+                if (onCompressionModeChange) {
+                  onCompressionModeChange(m);
+                } else {
+                  internalMode.value = m;
+                }
+              }}
               class={`font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded transition-colors ${
                 mode.value === m
                   ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"

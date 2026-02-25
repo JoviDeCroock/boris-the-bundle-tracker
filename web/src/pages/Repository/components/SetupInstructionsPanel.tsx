@@ -1,4 +1,6 @@
 import { Button } from "../../../components/ui/Button";
+import { API_BASE_URL } from "../../../lib/constants";
+import type { Repository } from "../../../lib/api";
 
 const WORKFLOW_SNIPPET = `name: Boris Bundle Tracker
 on:
@@ -32,6 +34,7 @@ jobs:
 type SetupInstructionsPanelProps = {
   packageCount: number;
   setupExpanded: boolean;
+  repository: Repository | undefined;
   onOpenActionFilesModal: () => void;
   onToggleExpanded: () => void;
 };
@@ -39,9 +42,13 @@ type SetupInstructionsPanelProps = {
 export function SetupInstructionsPanel({
   packageCount,
   setupExpanded,
+  repository,
   onOpenActionFilesModal,
   onToggleExpanded,
 }: SetupInstructionsPanelProps) {
+  const badgeUrl = repository
+    ? `${API_BASE_URL}/api/badge/${repository.owner}/${repository.name}/<package-name>`
+    : null;
   return (
     <section class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
       <div class="px-5 py-4 border-b border-neutral-800/60 flex items-start justify-between gap-4">
@@ -67,17 +74,39 @@ export function SetupInstructionsPanel({
         </div>
       </div>
       {setupExpanded && (
-        <div class="p-5">
-          <p class="font-mono text-xs text-neutral-700 mb-3">
-            Add the action files to your repo (button above), then reference the local action in your
-            workflow.
-          </p>
-          <pre
-            class="rounded-lg border border-neutral-800/60 p-4 text-xs text-neutral-400 overflow-x-auto font-mono leading-relaxed"
-            style="background: rgba(0,0,0,0.3);"
-          >
-            {WORKFLOW_SNIPPET}
-          </pre>
+        <div class="p-5 space-y-5">
+          <div>
+            <p class="font-mono text-xs text-neutral-700 mb-3">
+              Add the action files to your repo (button above), then reference the local action in your
+              workflow.
+            </p>
+            <pre
+              class="rounded-lg border border-neutral-800/60 p-4 text-xs text-neutral-400 overflow-x-auto font-mono leading-relaxed"
+              style="background: rgba(0,0,0,0.3);"
+            >
+              {WORKFLOW_SNIPPET}
+            </pre>
+          </div>
+
+          {packageCount > 0 && badgeUrl && (
+            <div>
+              <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-600 mb-2">
+                README badge
+              </p>
+              <p class="font-mono text-xs text-neutral-700 mb-2">
+                Embed a live bundle-size badge in your README. Replace{" "}
+                <code class="text-neutral-500 bg-neutral-800/60 px-1 rounded">&lt;package-name&gt;</code>{" "}
+                with the npm package name (URL-encode <code class="text-neutral-500 bg-neutral-800/60 px-1 rounded">@</code> as <code class="text-neutral-500 bg-neutral-800/60 px-1 rounded">%40</code>).
+                Optional query params: <code class="text-neutral-500 bg-neutral-800/60 px-1 rounded">compression=raw|gzip|brotli</code>,{" "}
+                <code class="text-neutral-500 bg-neutral-800/60 px-1 rounded">export=./client</code>,{" "}
+                <code class="text-neutral-500 bg-neutral-800/60 px-1 rounded">label=my+label</code>.
+              </p>
+              <pre
+                class="rounded-lg border border-neutral-800/60 p-4 text-xs text-neutral-400 overflow-x-auto font-mono leading-relaxed"
+                style="background: rgba(0,0,0,0.3);"
+              >{`![Bundle size](${badgeUrl})`}</pre>
+            </div>
+          )}
         </div>
       )}
     </section>

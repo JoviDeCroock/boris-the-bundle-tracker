@@ -189,6 +189,55 @@ See [api.md](./api.md#bundle-size-report) for the full API reference.
 
 ---
 
+## README badge
+
+Boris exposes a public SVG badge endpoint you can embed in any Markdown README to show the current bundle size at a glance.
+
+```
+https://<your-api-domain>/api/badge/<owner>/<repo>/<package-name>
+```
+
+### Example
+
+```markdown
+![Bundle size](https://boris-api.resynapse.dev/api/badge/acme/my-app/%40acme%2Fui)
+```
+
+### Query parameters
+
+| Parameter     | Default      | Description                                                      |
+| ------------- | ------------ | ---------------------------------------------------------------- |
+| `compression` | `gzip`       | Size to display: `raw`, `gzip`, or `brotli`                     |
+| `export`      | *(any)*      | Filter to a specific export path, e.g. `.` or `./client`        |
+| `label`       | `bundle size` | Custom left-hand badge label                                    |
+
+### Examples
+
+```markdown
+<!-- gzip size (default) -->
+![Bundle size](https://.../api/badge/acme/my-app/%40acme%2Fui)
+
+<!-- brotli size -->
+![Bundle size (br)](https://.../api/badge/acme/my-app/%40acme%2Fui?compression=brotli)
+
+<!-- specific export, custom label -->
+![Client bundle](https://.../api/badge/acme/my-app/%40acme%2Fui?export=./client&label=client+bundle)
+```
+
+Badge colors:
+
+| Range (gzip)  | Color  |
+| ------------- | ------ |
+| < 50 kB       | green  |
+| 50 – 150 kB   | amber  |
+| > 150 kB      | red    |
+
+For `raw` mode the badge is always blue. The badge is cached for 1 hour by CDNs.
+
+> **Note**: The badge reflects the latest *merged* PR size for that package. It becomes available as soon as the first PR with `prMerged: true` is recorded.
+
+---
+
 ## Troubleshooting
 
 ### "Invalid API key"

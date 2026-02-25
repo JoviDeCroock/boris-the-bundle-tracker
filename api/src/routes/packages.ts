@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, lt } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { Bindings, Variables } from "../types";
 
@@ -46,6 +46,9 @@ packages.get("/:repoId/packages", async (c) => {
 });
 
 // GET /:repoId/packages/:packageId/evolutions — bundle size history for a package
+// Query params:
+//   limit  — max number of pull-request groups to return (default 30, max 100)
+//   cursor — prNumber (exclusive upper bound); omit to start from the most recent
 packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
   const db = drizzle(c.env.DB, { schema });
   const userId = c.get("user")!.id;
@@ -54,6 +57,21 @@ packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
   if (!(await assertRepoAccess(db, userId, repoId))) {
     return c.json({ error: "Repository not found" }, 404);
   }
+
+  // Parse pagination params before querying so the cursor filter can be
+  // included in the parallel Promise.all fetch.
+  const limitParam = Number(c.req.query("limit") ?? 30);
+  const limit = Math.min(Math.max(1, Number.isFinite(limitParam) ? limitParam : 30), 100);
+  const cursorParam = c.req.query("cursor");
+  const cursor = cursorParam != null ? Number(cursorParam) : null;
+
+  const evolutionsCondition =
+    cursor != null && Number.isFinite(cursor)
+      ? and(
+          eq(schema.packageEvolution.packageId, packageId),
+          lt(schema.packageEvolution.prNumber, cursor),
+        )
+      : eq(schema.packageEvolution.packageId, packageId);
 
   const [pkg, allEvolutions] = await Promise.all([
     // Verify the package belongs to this repository
@@ -65,7 +83,7 @@ packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
     db
       .select()
       .from(schema.packageEvolution)
-      .where(eq(schema.packageEvolution.packageId, packageId))
+      .where(evolutionsCondition)
       .orderBy(desc(schema.packageEvolution.reportedAt))
       .all(),
   ]);
@@ -73,6 +91,7 @@ packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
   if (!pkg) {
     return c.json({ error: "Package not found" }, 404);
   }
+
 
   const latestCommitByPr = new Map<number, string>();
   const pullRequestsByNumber = new Map<
@@ -117,11 +136,15 @@ packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
     }
   }
 
-  const pullRequests = Array.from(pullRequestsByNumber.values()).sort(
+  const allPullRequests = Array.from(pullRequestsByNumber.values()).sort(
     (a, b) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime(),
   );
 
-  return c.json({ package: pkg, pullRequests });
+  // Apply limit-based pagination on the grouped pull requests
+  const page = allPullRequests.slice(0, limit);
+  const nextCursor = allPullRequests.length > limit ? allPullRequests[limit].prNumber : null;
+
+  return c.json({ package: pkg, pullRequests: page, nextCursor });
 });
 
 // PATCH /:repoId/packages/:packageId/evolutions/:prNumber — mark PR as merged/closed
