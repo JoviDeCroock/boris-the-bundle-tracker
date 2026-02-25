@@ -66,14 +66,61 @@ packages.get("/:repoId/packages/:packageId/evolutions", async (c) => {
     return c.json({ error: "Package not found" }, 404);
   }
 
-  const evolutions = await db
+  const allEvolutions = await db
     .select()
     .from(schema.packageEvolution)
     .where(eq(schema.packageEvolution.packageId, packageId))
     .orderBy(desc(schema.packageEvolution.reportedAt))
     .all();
 
-  return c.json({ package: pkg, evolutions });
+  const latestCommitByPr = new Map<number, string>();
+  const pullRequestsByNumber = new Map<
+    number,
+    {
+      prNumber: number;
+      prTitle: string | null;
+      branch: string;
+      commitSha: string;
+      prMerged: boolean;
+      prState: "open" | "closed";
+      reportedAt: Date;
+      evolutions: typeof allEvolutions;
+    }
+  >();
+
+  for (const evolution of allEvolutions) {
+    const latestCommitSha = latestCommitByPr.get(evolution.prNumber);
+
+    if (!latestCommitSha) {
+      latestCommitByPr.set(evolution.prNumber, evolution.commitSha);
+      pullRequestsByNumber.set(evolution.prNumber, {
+        prNumber: evolution.prNumber,
+        prTitle: evolution.prTitle,
+        branch: evolution.branch,
+        commitSha: evolution.commitSha,
+        prMerged: Boolean(evolution.prMerged),
+        prState: evolution.prState === "closed" ? "closed" : "open",
+        reportedAt: evolution.reportedAt,
+        evolutions: [evolution],
+      });
+      continue;
+    }
+
+    if (latestCommitSha !== evolution.commitSha) {
+      continue;
+    }
+
+    const pullRequest = pullRequestsByNumber.get(evolution.prNumber);
+    if (pullRequest) {
+      pullRequest.evolutions.push(evolution);
+    }
+  }
+
+  const pullRequests = Array.from(pullRequestsByNumber.values()).sort(
+    (a, b) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime(),
+  );
+
+  return c.json({ package: pkg, pullRequests });
 });
 
 // PATCH /:repoId/packages/:packageId/evolutions/:prNumber — mark PR as merged/closed
@@ -145,7 +192,12 @@ packages.delete("/:repoId/packages/:packageId/evolutions/:prNumber", async (c) =
 
   await db
     .delete(schema.packageEvolution)
-    .where(and(eq(schema.packageEvolution.packageId, packageId), eq(schema.packageEvolution.prNumber, prNumber)));
+    .where(
+      and(
+        eq(schema.packageEvolution.packageId, packageId),
+        eq(schema.packageEvolution.prNumber, prNumber),
+      ),
+    );
 
   return c.json({ success: true });
 });

@@ -43,7 +43,10 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
   }
 
   return (
-    <section class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
+    <section
+      class="rounded-xl border border-neutral-800 overflow-hidden"
+      style="background: #111113;"
+    >
       <div class="px-5 py-4 border-b border-neutral-800/60">
         <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">Packages</h2>
         <p class="text-xs text-neutral-700 mt-1">
@@ -58,7 +61,9 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
       ) : (packagesQuery.data ?? []).length === 0 ? (
         <div class="py-10 px-5 text-center">
           <p class="font-mono text-xs text-neutral-700">No packages tracked yet.</p>
-          <p class="font-mono text-xs text-neutral-800 mt-1">Set up the GitHub Action to start collecting data.</p>
+          <p class="font-mono text-xs text-neutral-800 mt-1">
+            Set up the GitHub Action to start collecting data.
+          </p>
         </div>
       ) : (
         <ul class="divide-y divide-neutral-800/60">
@@ -83,7 +88,13 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
                     }}
                     title="Delete package"
                   >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width={1.5}>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width={1.5}
+                    >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
@@ -97,11 +108,17 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
               {expandedId.value === pkg.id && (
                 <div class="pb-4 space-y-3">
                   {evolutionsQuery.isLoading ? (
-                    <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                    <div
+                      class="rounded-lg border border-neutral-800/60 p-4"
+                      style="background: rgba(0,0,0,0.2);"
+                    >
                       <p class="font-mono text-xs text-neutral-600">Loading history…</p>
                     </div>
                   ) : evolutionsQuery.error ? (
-                    <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                    <div
+                      class="rounded-lg border border-neutral-800/60 p-4"
+                      style="background: rgba(0,0,0,0.2);"
+                    >
                       <p class="font-mono text-xs text-red-400">
                         {evolutionsQuery.error instanceof Error
                           ? evolutionsQuery.error.message
@@ -110,14 +127,26 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
                     </div>
                   ) : (
                     <>
-                      {(evolutionsQuery.data?.evolutions ?? []).some((evolution) => evolution.prMerged) && (
-                        <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
-                          <BundleSizeChart evolutions={evolutionsQuery.data?.evolutions ?? []} />
+                      {(evolutionsQuery.data?.pullRequests ?? []).some(
+                        (pullRequest) => pullRequest.prMerged,
+                      ) && (
+                        <div
+                          class="rounded-lg border border-neutral-800/60 p-4"
+                          style="background: rgba(0,0,0,0.2);"
+                        >
+                          <BundleSizeChart
+                            evolutions={(evolutionsQuery.data?.pullRequests ?? []).flatMap(
+                              (pullRequest) => pullRequest.evolutions,
+                            )}
+                          />
                         </div>
                       )}
-                      <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                      <div
+                        class="rounded-lg border border-neutral-800/60 p-4"
+                        style="background: rgba(0,0,0,0.2);"
+                      >
                         <EvolutionsTable
-                          evolutions={evolutionsQuery.data?.evolutions ?? []}
+                          pullRequests={evolutionsQuery.data?.pullRequests ?? []}
                           repository={repository}
                           repoId={repoId}
                           packageId={pkg.id}

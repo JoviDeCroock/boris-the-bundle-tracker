@@ -202,28 +202,39 @@ GET /api/v1/repositories/:repoId/packages
 GET /api/v1/repositories/:repoId/packages/:packageId/evolutions
 ```
 
-Returns size records ordered by `reportedAt` descending (newest first).
+Returns pull-request groups ordered by recency, and each group includes only evolution rows from that pull request's latest `commitSha`.
 
 **Response 200**
 
 ```json
 {
   "package": { "id": "uuid", "name": "@acme/ui", ... },
-  "evolutions": [
+  "pullRequests": [
     {
-      "id": "uuid",
-      "packageId": "uuid",
       "prNumber": 42,
       "prTitle": "feat: add dark mode",
       "branch": "feat/dark-mode",
       "commitSha": "abc1234",
       "prMerged": false,
       "prState": "open",
-      "exportPath": ".",
-      "fileName": "dist/index.js",
-      "mainSize": 10240,
-      "prSize": 10850,
-      "reportedAt": "..."
+      "reportedAt": "...",
+      "evolutions": [
+        {
+          "id": "uuid",
+          "packageId": "uuid",
+          "prNumber": 42,
+          "prTitle": "feat: add dark mode",
+          "branch": "feat/dark-mode",
+          "commitSha": "abc1234",
+          "prMerged": false,
+          "prState": "open",
+          "exportPath": ".",
+          "fileName": "dist/index.js",
+          "mainSize": 10240,
+          "prSize": 10850,
+          "reportedAt": "..."
+        }
+      ]
     }
   ]
 }
