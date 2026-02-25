@@ -8,6 +8,7 @@ import { repositories } from "./routes/repositories";
 import { apiKeys } from "./routes/api-keys";
 import { packages } from "./routes/packages";
 import { report } from "./routes/report";
+import { analyzeHandler, AnalysisMessage } from "./queues/analyze";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import * as schema from "./db/schema";
@@ -149,4 +150,8 @@ app.route("/api/v1/repositories", packages);
 // Bundle-size report endpoint — authenticated via Bearer API key (not session)
 app.route("/api/report", report);
 
-export default app;
+export default {
+  fetch: app.fetch,
+  queue: (batch: MessageBatch<AnalysisMessage>, env: Bindings) =>
+    analyzeHandler(batch, env),
+};

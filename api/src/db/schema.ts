@@ -158,9 +158,17 @@ export const packageEvolution = sqliteTable(
     /**
      * Per-named-export sizes serialized as JSON.
      * Shape: { main: Record<string, number> | null, pr: Record<string, number> | null }
-     * Null when esbuild analysis was not available during the action run.
+     * Populated asynchronously by the analysis queue consumer.
      */
     exportSizes: text("export_sizes"),
+    /**
+     * Lifecycle of the async server-side export analysis:
+     *   null       – file content was not uploaded (old records or files > 5 MB)
+     *   "pending"  – content stored in R2, queued for analysis
+     *   "complete" – export_sizes has been populated
+     *   "failed"   – analysis failed after max retries
+     */
+    analysisStatus: text("analysis_status"),
     reportedAt: integer("reported_at", { mode: "timestamp" }).notNull(),
   },
   (t) => [

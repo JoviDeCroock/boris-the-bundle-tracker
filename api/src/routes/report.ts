@@ -52,14 +52,24 @@ interface ReportPayload {
         /** Brotli size in bytes on the PR branch. */
         brotliPrSize?: number;
         /**
-         * Per-named-export sizes measured by tree-shaking each export individually.
-         * Only present when esbuild was available in the project's node_modules.
+         * Gzip-compressed, base64-encoded content of the file on the base branch.
+         * Uploaded by the action so Boris can run per-export analysis server-side.
+         * Omitted for files larger than 5 MB (uncompressed).
          */
-        mainExportSizes?: Record<string, number> | null;
-        prExportSizes?: Record<string, number> | null;
+        mainFileContent?: string | null;
+        /** Same as mainFileContent but for the PR branch. */
+        prFileContent?: string | null;
       }>;
     }>;
   }>;
+}
+
+/** Decode base64 + gzip content string → Uint8Array ready to store in R2. */
+function decodeFileContent(b64gz: string): Uint8Array {
+  const binary = atob(b64gz);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 
 /**
@@ -210,13 +220,11 @@ report.post("/", async (c) => {
           )
           .get();
 
-        const exportSizesJson =
-          fileEntry.mainExportSizes != null || fileEntry.prExportSizes != null
-            ? JSON.stringify({
-                main: fileEntry.mainExportSizes ?? null,
-                pr: fileEntry.prExportSizes ?? null,
-              })
-            : null;
+        // Determine analysis status based on whether file content was uploaded
+        const hasContent = !!(fileEntry.mainFileContent || fileEntry.prFileContent);
+        const analysisStatus = hasContent ? "pending" : null;
+
+        const evolutionId = existing?.id ?? crypto.randomUUID();
 
         if (existing) {
           await db
@@ -231,13 +239,14 @@ report.post("/", async (c) => {
               gzipPrSize: fileEntry.gzipPrSize ?? null,
               brotliMainSize: fileEntry.brotliMainSize ?? null,
               brotliPrSize: fileEntry.brotliPrSize ?? null,
-              exportSizes: exportSizesJson,
+              // Reset export data when re-running so fresh content is re-analysed
+              ...(hasContent ? { exportSizes: null, analysisStatus: "pending" } : {}),
               reportedAt: now,
             })
-            .where(eq(schema.packageEvolution.id, existing.id));
+            .where(eq(schema.packageEvolution.id, evolutionId));
         } else {
           await db.insert(schema.packageEvolution).values({
-            id: crypto.randomUUID(),
+            id: evolutionId,
             packageId: pkgRecord.id,
             prNumber,
             prTitle: prTitle ?? null,
@@ -253,9 +262,36 @@ report.post("/", async (c) => {
             gzipPrSize: fileEntry.gzipPrSize ?? null,
             brotliMainSize: fileEntry.brotliMainSize ?? null,
             brotliPrSize: fileEntry.brotliPrSize ?? null,
-            exportSizes: exportSizesJson,
+            exportSizes: null,
+            analysisStatus,
             reportedAt: now,
           });
+        }
+
+        // ── Store file content in R2 and enqueue analysis ─────────────────
+        if (hasContent && c.env.ARTIFACTS && c.env.ANALYSIS_QUEUE) {
+          try {
+            let mainKey: string | null = null;
+            let prKey: string | null = null;
+
+            if (fileEntry.mainFileContent) {
+              mainKey = `artifacts/${evolutionId}/main.gz`;
+              await c.env.ARTIFACTS.put(mainKey, decodeFileContent(fileEntry.mainFileContent));
+            }
+            if (fileEntry.prFileContent) {
+              prKey = `artifacts/${evolutionId}/pr.gz`;
+              await c.env.ARTIFACTS.put(prKey, decodeFileContent(fileEntry.prFileContent));
+            }
+
+            await c.env.ANALYSIS_QUEUE.send({ evolutionId, mainKey, prKey });
+          } catch (err) {
+            // Don't fail the whole report if storage/enqueue fails
+            console.error(`Failed to store artifacts for evolution ${evolutionId}:`, err);
+            await db
+              .update(schema.packageEvolution)
+              .set({ analysisStatus: "failed" })
+              .where(eq(schema.packageEvolution.id, evolutionId));
+          }
         }
         upsertedCount++;
       }

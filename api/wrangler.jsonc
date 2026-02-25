@@ -31,4 +31,28 @@
       "migrations_dir": "drizzle/migrations",
     },
   ],
+  // Bucket created with: wrangler r2 bucket create boris-artifacts
+  "r2_buckets": [
+    {
+      "binding": "ARTIFACTS",
+      "bucket_name": "boris-artifacts",
+    },
+  ],
+  // Queue created with: wrangler queues create boris-analysis
+  "queues": {
+    "producers": [
+      {
+        "binding": "ANALYSIS_QUEUE",
+        "queue": "boris-analysis",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "boris-analysis",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+      },
+    ],
+  },
 }

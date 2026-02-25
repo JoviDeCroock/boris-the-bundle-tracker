@@ -122,8 +122,10 @@ export interface PackageEvolution {
   gzipPrSize: number | null;
   brotliMainSize: number | null;
   brotliPrSize: number | null;
-  /** JSON-serialized ExportSizes, null when esbuild analysis was unavailable. */
+  /** JSON-serialized ExportSizes, populated after server-side analysis completes. */
   exportSizes: string | null;
+  /** null = no content uploaded; "pending" = queued; "complete" = ready; "failed" = error */
+  analysisStatus: string | null;
   reportedAt: string;
 }
 

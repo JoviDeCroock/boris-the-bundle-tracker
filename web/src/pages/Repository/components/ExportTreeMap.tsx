@@ -365,11 +365,21 @@ export function ExportTreeMap({ evolutions }: ExportTreeMapProps) {
             </option>
           ))}
         </select>
-        {!hasData && (
-          <span class="font-mono text-[11px] text-neutral-600">
-            No export analysis data — esbuild was not available when this PR ran.
-          </span>
-        )}
+        {!hasData && (() => {
+          const prFiles = selectedPr.value != null ? prMap.get(selectedPr.value) : undefined;
+          const statuses = prFiles ? [...prFiles.values()].map((ev) => ev.analysisStatus) : [];
+          const allPending = statuses.length > 0 && statuses.every((s) => s === "pending");
+          const anyFailed = statuses.some((s) => s === "failed");
+          return (
+            <span class="font-mono text-[11px] text-neutral-600">
+              {allPending
+                ? "⏳ Analysis queued — results will appear after server-side processing."
+                : anyFailed
+                  ? "Export analysis failed for this PR."
+                  : "No export data for this PR — re-run the action to collect it."}
+            </span>
+          );
+        })()}
       </div>
 
       {hasData && (
