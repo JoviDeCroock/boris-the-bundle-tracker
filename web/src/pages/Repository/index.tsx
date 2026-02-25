@@ -71,7 +71,7 @@ export function RepositoryPage() {
         open={actionFilesModalOpen.value}
         onClose={() => (actionFilesModalOpen.value = false)}
       />
-      <div class="max-w-3xl mx-auto px-6 py-10 space-y-5">
+      <div class="max-w-7xl mx-auto px-6 py-10 space-y-5">
         <div class="flex items-center gap-2 font-mono text-xs text-neutral-600">
           <button onClick={() => route("/dashboard")} class="hover:text-neutral-300 transition-colors">
             repositories
