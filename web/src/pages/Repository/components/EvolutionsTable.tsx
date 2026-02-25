@@ -3,9 +3,10 @@ import { useSignal, useComputed } from "@preact/signals";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../../components/ui/Button";
 import { deleteEvolution, updateEvolution } from "../../../lib/api";
-import type { PackageEvolutionPullRequest, Repository } from "../../../lib/api";
+import type { PackageEvolution, PackageEvolutionPullRequest, Repository } from "../../../lib/api";
 import { diffBadge, SizeCell } from "./sizeUtils";
 
+type CompressionMode = "raw" | "gzip" | "brotli";
 type StatusFilter = "all" | "open" | "closed" | "merged";
 type SortField = "date" | "delta";
 type SortDir = "asc" | "desc";
@@ -15,14 +16,41 @@ type EvolutionsTableProps = {
   repository: Repository | undefined;
   repoId: string;
   packageId: string;
+  /** Compression mode shared with the chart. Controls which sizes the Change column shows. */
+  compressionMode?: CompressionMode;
+  onCompressionModeChange?: (mode: CompressionMode) => void;
 };
+
+function getEvolutionSize(ev: PackageEvolution, mode: CompressionMode): number {
+  if (mode === "gzip") return ev.gzipPrSize ?? ev.prSize;
+  if (mode === "brotli") return ev.brotliPrSize ?? ev.prSize;
+  return ev.prSize;
+}
+
+function getEvolutionMainSize(ev: PackageEvolution, mode: CompressionMode): number {
+  if (mode === "gzip") return ev.gzipMainSize ?? ev.mainSize;
+  if (mode === "brotli") return ev.brotliMainSize ?? ev.mainSize;
+  return ev.mainSize;
+}
 
 export function EvolutionsTable({
   pullRequests,
   repository,
   repoId,
   packageId,
+  compressionMode: externalMode,
+  onCompressionModeChange,
 }: EvolutionsTableProps) {
+  const internalMode = useSignal<CompressionMode>("gzip");
+  const activeMode = externalMode ?? internalMode.value;
+
+  function setMode(m: CompressionMode) {
+    if (onCompressionModeChange) {
+      onCompressionModeChange(m);
+    } else {
+      internalMode.value = m;
+    }
+  }
   const queryClient = useQueryClient();
   const updatingPr = useSignal<number | null>(null);
   const deletingPr = useSignal<number | null>(null);
@@ -96,9 +124,12 @@ export function EvolutionsTable({
     };
   }, []);
 
-  /** Total raw delta for a pull request (sum across all evolution rows). */
+  /** Total delta for a pull request using the active compression mode. */
   function prDelta(pr: PackageEvolutionPullRequest): number {
-    return pr.evolutions.reduce((acc, ev) => acc + (ev.gzipPrSize ?? ev.prSize) - (ev.gzipMainSize ?? ev.mainSize), 0);
+    return pr.evolutions.reduce(
+      (acc, ev) => acc + getEvolutionSize(ev, activeMode) - getEvolutionMainSize(ev, activeMode),
+      0,
+    );
   }
 
   const filteredAndSorted = useComputed(() => {
@@ -203,11 +234,33 @@ export function EvolutionsTable({
               <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">
                 PR
               </th>
-              <th
-                class="pb-2 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right cursor-pointer select-none hover:text-neutral-400 transition-colors"
-                onClick={() => toggleSort("delta")}
-              >
-                Change (gz)<SortIndicator field="delta" />
+              <th class="pb-2 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  {/* Compression mode toggle (links to chart toggle) */}
+                  {(["raw", "gzip", "brotli"] as CompressionMode[]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMode(m);
+                      }}
+                      class={`font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors ${
+                        activeMode === m
+                          ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                          : "text-neutral-800 hover:text-neutral-500 border-transparent"
+                      }`}
+                    >
+                      {m === "gzip" ? "gz" : m === "brotli" ? "br" : "raw"}
+                    </button>
+                  ))}
+                  <span
+                    class="cursor-pointer select-none hover:text-neutral-400 transition-colors"
+                    onClick={() => toggleSort("delta")}
+                  >
+                    Change<SortIndicator field="delta" />
+                  </span>
+                </div>
               </th>
             </tr>
           </thead>
@@ -324,8 +377,8 @@ export function EvolutionsTable({
                     </td>
                     <td class="py-2.5 text-right">
                       {diffBadge(
-                        evolution.gzipMainSize ?? evolution.mainSize,
-                        evolution.gzipPrSize ?? evolution.prSize,
+                        getEvolutionMainSize(evolution, activeMode),
+                        getEvolutionSize(evolution, activeMode),
                       )}
                     </td>
                   </tr>

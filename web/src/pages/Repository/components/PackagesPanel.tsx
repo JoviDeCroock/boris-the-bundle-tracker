@@ -13,6 +13,8 @@ type PackagesPanelProps = {
   repository: Repository | undefined;
 };
 
+type CompressionMode = "raw" | "gzip" | "brotli";
+
 export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
   const queryClient = useQueryClient();
   const expandedId = useSignal<string | null>(null);
@@ -20,6 +22,8 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
   const accumulatedPrs = useSignal<PackageEvolutionPullRequest[]>([]);
   const nextCursor = useSignal<number | null>(null);
   const loadingMore = useSignal(false);
+  // Shared compression mode between chart and table
+  const compressionMode = useSignal<CompressionMode>("gzip");
 
   const packagesQuery = useQuery({
     queryKey: ["repositories", repoId, "packages"],
@@ -166,6 +170,8 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
                         >
                           <BundleSizeChart
                             evolutions={accumulatedPrs.value.flatMap((pr) => pr.evolutions)}
+                            compressionMode={compressionMode.value}
+                            onCompressionModeChange={(m) => (compressionMode.value = m)}
                           />
                         </div>
                       )}
@@ -178,6 +184,8 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
                           repository={repository}
                           repoId={repoId}
                           packageId={pkg.id}
+                          compressionMode={compressionMode.value}
+                          onCompressionModeChange={(m) => (compressionMode.value = m)}
                         />
                         {nextCursor.value != null && (
                           <div class="mt-3 flex justify-center">
