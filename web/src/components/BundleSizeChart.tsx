@@ -274,10 +274,10 @@ export function BundleSizeChart({ evolutions }: Props) {
                     key={i}
                     cx={p.x}
                     cy={p.y}
-                    r="3.5"
+                    r="5"
                     fill={color}
                     stroke="#111113"
-                    stroke-width="1.5"
+                    stroke-width="2"
                     style="cursor: pointer;"
                     onMouseEnter={() =>
                       tooltip.value = {
