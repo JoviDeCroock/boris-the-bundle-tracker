@@ -15,6 +15,7 @@ import { Footer } from "./components/Footer";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { createQueryClient } from "./lib/query-client";
 import "./style.css";
+import { render } from "preact";
 
 const Home = lazy(() => import("./pages/Home/index").then((module) => module.Home));
 const Auth = lazy(() => import("./pages/Auth/index").then((module) => module.Auth));
@@ -63,7 +64,14 @@ export function App() {
 }
 
 if (typeof window !== "undefined") {
-  hydrate(<App />, document.getElementById("app"));
+  const appElement = document.getElementById("app");
+  const path = window.location.pathname;
+  if (path === "/" || path === "/auth") {
+    hydrate(<App />, appElement);
+  } else {
+    appElement.innerHTML = "";
+    render(<App />, appElement);
+  }
 }
 
 export async function prerender(data) {
