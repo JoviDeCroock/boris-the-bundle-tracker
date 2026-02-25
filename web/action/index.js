@@ -416,6 +416,31 @@ async function main() {
     throw new Error("Missing required GitHub metadata");
   }
 
+  const endpoint = `${apiUrl.replace(/\/$/, "")}/api/report`;
+
+  // For closed PR events, avoid re-measuring files (which can overwrite
+  // historical diffs once the base branch includes the merged changes).
+  // Just update merge/state metadata on the existing evolution rows.
+  if (prState === "closed") {
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ repository, prNumber, prMerged, prState }),
+    });
+
+    const bodyText = await response.text();
+    if (!response.ok) {
+      throw new Error(`Boris API request failed (${response.status}): ${bodyText}`);
+    }
+
+    setOutput("records-created", 0);
+    console.log(`Updated PR status in Boris for #${prNumber} (${prState}).`);
+    return;
+  }
+
   run(installCommand, workingDirectory);
   run(buildCommand, workingDirectory);
   const prSnapshot = collectSnapshot(workingDirectory);
@@ -447,7 +472,6 @@ async function main() {
     packages: mergeSnapshots(mainSnapshot, prSnapshot),
   };
 
-  const endpoint = `${apiUrl.replace(/\/$/, "")}/api/report`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
