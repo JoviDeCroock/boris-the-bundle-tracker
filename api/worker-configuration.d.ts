@@ -13,6 +13,8 @@ declare namespace Cloudflare {
     POLAR_WEBHOOK_SECRET: string;
     POLAR_PRO_PRODUCT_ID: string;
     LOCAL: string;
+    /** Comma-separated list of admin email addresses that can manage feature flags. */
+    ADMIN_EMAILS: string;
   }
 }
 interface Env extends Cloudflare.Env {}

@@ -163,6 +163,28 @@ export const packageEvolution = sqliteTable(
   ],
 );
 
+// ── Feature Flags ─────────────────────────────────────────────
+
+/**
+ * Feature flags for controlled rollout of new functionality.
+ * A flag is considered enabled for a user when:
+ *   1. `enabled` is true, AND
+ *   2. Either the user's ID appears in `allowedUserIds`,
+ *      OR the user falls within `rolloutPercentage` (deterministic hash-based).
+ */
+export const featureFlag = sqliteTable("feature_flag", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(), // e.g. "new-dashboard"
+  description: text("description"),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+  /** JSON-encoded string[]: specific user IDs who always get this flag. */
+  allowedUserIds: text("allowed_user_ids"),
+  /** 0–100: percentage of users who get this flag via hash-based rollout. */
+  rolloutPercentage: integer("rollout_percentage").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
 // ── Subscriptions ─────────────────────────────────────────────
 
 export const subscription = sqliteTable(

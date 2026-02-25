@@ -9,6 +9,7 @@ import { apiKeys } from "./routes/api-keys";
 import { packages } from "./routes/packages";
 import { report } from "./routes/report";
 import { badge } from "./routes/badge";
+import { featureFlags } from "./routes/feature-flags";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import * as schema from "./db/schema";
@@ -146,6 +147,9 @@ app.route("/api/v1/subscription", subscription);
 app.route("/api/v1/repositories", repositories);
 app.route("/api/v1/repositories", apiKeys);
 app.route("/api/v1/repositories", packages);
+
+// Feature flags — user view + admin CRUD
+app.route("/api/v1/feature-flags", featureFlags);
 
 // Bundle-size report endpoint — authenticated via Bearer API key (not session)
 app.route("/api/report", report);

@@ -20,6 +20,13 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return response.json() as Promise<T>;
 }
 
+// ── Feature Flags ─────────────────────────────────────────────────────────────
+
+export async function getFeatureFlags(): Promise<string[]> {
+  const res = await fetchApi<{ flags: string[] }>("/api/v1/feature-flags");
+  return res.flags;
+}
+
 // ── Subscription ──────────────────────────────────────────────────────────────
 
 export interface SubscriptionResponse {
