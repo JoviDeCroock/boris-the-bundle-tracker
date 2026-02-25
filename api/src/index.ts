@@ -8,6 +8,7 @@ import { repositories } from "./routes/repositories";
 import { apiKeys } from "./routes/api-keys";
 import { packages } from "./routes/packages";
 import { report } from "./routes/report";
+import { badge } from "./routes/badge";
 import { Bindings, Variables } from "./types";
 import { isProduction } from "./utils/isProduction";
 import * as schema from "./db/schema";
@@ -148,5 +149,8 @@ app.route("/api/v1/repositories", packages);
 
 // Bundle-size report endpoint — authenticated via Bearer API key (not session)
 app.route("/api/report", report);
+
+// Public SVG badge endpoint — no auth required
+app.route("/api/badge", badge);
 
 export default app;
