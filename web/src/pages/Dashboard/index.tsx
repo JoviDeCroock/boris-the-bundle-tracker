@@ -48,7 +48,7 @@ export function Dashboard() {
   if (auth.loading.value) {
     return (
       <div class="min-h-screen bg-neutral-950 pt-14 flex items-center justify-center">
-        <span class="font-mono text-xs text-neutral-600">loading...</span>
+        <span class="font-mono text-xs text-neutral-500">loading...</span>
       </div>
     );
   }
@@ -79,7 +79,7 @@ export function Dashboard() {
         <div class="mb-8">
           <p class="font-mono text-xs text-orange-500 tracking-widest uppercase mb-2">Dashboard</p>
           <h1 class="text-2xl font-bold text-white">Repositories</h1>
-          <p class="text-sm text-neutral-600 mt-1">
+          <p class="text-sm text-neutral-400 mt-1">
             Track bundle-size evolution across your GitHub repositories.
           </p>
         </div>

@@ -19,13 +19,13 @@ export function RepositoriesPanel({
   return (
     <div class="rounded-xl border border-neutral-800 overflow-hidden" style="background: #111113;">
       <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-800/60">
-        <h2 class="text-xs font-mono text-neutral-500 uppercase tracking-wider">Tracked repositories</h2>
-        <span class="font-mono text-xs text-neutral-600">{repositories.length} linked</span>
+        <h2 class="text-xs font-mono text-neutral-400 uppercase tracking-wider">Tracked repositories</h2>
+        <span class="font-mono text-xs text-neutral-500">{repositories.length} linked</span>
       </div>
 
       {loading ? (
         <div class="py-10 text-center">
-          <span class="font-mono text-xs text-neutral-600">loading…</span>
+          <span class="font-mono text-xs text-neutral-500">loading…</span>
         </div>
       ) : error ? (
         <div class="py-10 text-center">
@@ -34,7 +34,7 @@ export function RepositoriesPanel({
       ) : repositories.length === 0 ? (
         <div class="py-12 text-center px-5">
           <div class="w-10 h-10 rounded-lg bg-neutral-800 flex items-center justify-center mx-auto mb-3">
-            <svg class="w-5 h-5 text-neutral-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -42,8 +42,8 @@ export function RepositoriesPanel({
               />
             </svg>
           </div>
-          <p class="text-sm text-neutral-600">No repositories yet.</p>
-          <p class="text-xs text-neutral-700 mt-1">Add one above to start tracking.</p>
+          <p class="text-sm text-neutral-400">No repositories yet.</p>
+          <p class="text-xs text-neutral-500 mt-1">Add one above to start tracking.</p>
         </div>
       ) : (
         <ul class="divide-y divide-neutral-800/60">
@@ -54,7 +54,7 @@ export function RepositoriesPanel({
             >
               <button class="text-left min-w-0" onClick={() => onOpen(repo.id)}>
                 <span class="text-sm font-mono text-neutral-300 group-hover:text-white transition-colors">
-                  <span class="text-neutral-600">{repo.owner}/</span>
+                  <span class="text-neutral-500">{repo.owner}/</span>
                   {repo.name}
                 </span>
               </button>
