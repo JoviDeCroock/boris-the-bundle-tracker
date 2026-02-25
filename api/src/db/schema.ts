@@ -155,6 +155,12 @@ export const packageEvolution = sqliteTable(
     gzipPrSize: integer("gzip_pr_size"), // gzip bytes on PR branch
     brotliMainSize: integer("brotli_main_size"), // brotli bytes on base branch
     brotliPrSize: integer("brotli_pr_size"), // brotli bytes on PR branch
+    /**
+     * Per-named-export sizes serialized as JSON.
+     * Shape: { main: Record<string, number> | null, pr: Record<string, number> | null }
+     * Null when esbuild analysis was not available during the action run.
+     */
+    exportSizes: text("export_sizes"),
     reportedAt: integer("reported_at", { mode: "timestamp" }).notNull(),
   },
   (t) => [

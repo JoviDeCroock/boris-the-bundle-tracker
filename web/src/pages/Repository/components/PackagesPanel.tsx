@@ -5,15 +5,19 @@ import { BundleSizeChart } from "../../../components/BundleSizeChart";
 import { deletePackage, getPackageEvolutions, listPackages } from "../../../lib/api";
 import type { Repository } from "../../../lib/api";
 import { EvolutionsTable } from "./EvolutionsTable";
+import { ExportTreeMap } from "./ExportTreeMap";
 
 type PackagesPanelProps = {
   repoId: string;
   repository: Repository | undefined;
 };
 
+type PackageView = "chart" | "treemap";
+
 export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
   const queryClient = useQueryClient();
   const expandedId = useSignal<string | null>(null);
+  const activeView = useSignal<PackageView>("chart");
 
   const packagesQuery = useQuery({
     queryKey: ["repositories", repoId, "packages"],
@@ -40,6 +44,7 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
       return;
     }
     expandedId.value = packageId;
+    activeView.value = "chart";
   }
 
   return (
@@ -110,19 +115,50 @@ export function PackagesPanel({ repoId, repository }: PackagesPanelProps) {
                     </div>
                   ) : (
                     <>
-                      {(evolutionsQuery.data?.evolutions ?? []).some((evolution) => evolution.prMerged) && (
-                        <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
-                          <BundleSizeChart evolutions={evolutionsQuery.data?.evolutions ?? []} />
+                      {/* View tab bar */}
+                      <div class="flex gap-1">
+                        {(["chart", "treemap"] as PackageView[]).map((view) => (
+                          <button
+                            key={view}
+                            type="button"
+                            onClick={() => (activeView.value = view)}
+                            class={`font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded transition-colors ${
+                              activeView.value === view
+                                ? "bg-neutral-800 text-neutral-200"
+                                : "text-neutral-600 hover:text-neutral-400"
+                            }`}
+                          >
+                            {view === "chart" ? "Size Trend" : "Export Map"}
+                          </button>
+                        ))}
+                      </div>
+
+                      {activeView.value === "chart" && (
+                        <>
+                          {(evolutionsQuery.data?.evolutions ?? []).some((ev) => ev.prMerged) && (
+                            <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                              <BundleSizeChart evolutions={evolutionsQuery.data?.evolutions ?? []} />
+                            </div>
+                          )}
+                          <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
+                            <EvolutionsTable
+                              evolutions={evolutionsQuery.data?.evolutions ?? []}
+                              repository={repository}
+                              repoId={repoId}
+                              packageId={pkg.id}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {activeView.value === "treemap" && (
+                        <div class="rounded-lg border border-neutral-800/60 p-4 overflow-x-auto" style="background: rgba(0,0,0,0.2);">
+                          <p class="font-mono text-[10px] uppercase tracking-wider text-neutral-500 mb-3">
+                            Export sizes — each cell shows how many bytes importing that export alone costs
+                          </p>
+                          <ExportTreeMap evolutions={evolutionsQuery.data?.evolutions ?? []} />
                         </div>
                       )}
-                      <div class="rounded-lg border border-neutral-800/60 p-4" style="background: rgba(0,0,0,0.2);">
-                        <EvolutionsTable
-                          evolutions={evolutionsQuery.data?.evolutions ?? []}
-                          repository={repository}
-                          repoId={repoId}
-                          packageId={pkg.id}
-                        />
-                      </div>
                     </>
                   )}
                 </div>

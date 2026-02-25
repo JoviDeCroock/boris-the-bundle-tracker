@@ -98,6 +98,13 @@ export interface Package {
   updatedAt: string;
 }
 
+export interface ExportSizes {
+  /** Per-named-export sizes on the base branch. */
+  main: Record<string, number> | null;
+  /** Per-named-export sizes on the PR branch. */
+  pr: Record<string, number> | null;
+}
+
 export interface PackageEvolution {
   id: string;
   packageId: string;
@@ -115,6 +122,8 @@ export interface PackageEvolution {
   gzipPrSize: number | null;
   brotliMainSize: number | null;
   brotliPrSize: number | null;
+  /** JSON-serialized ExportSizes, null when esbuild analysis was unavailable. */
+  exportSizes: string | null;
   reportedAt: string;
 }
 

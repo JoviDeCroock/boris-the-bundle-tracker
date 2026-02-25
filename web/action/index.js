@@ -1,7 +1,8 @@
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const zlib = require("node:zlib");
-const { execSync } = require("node:child_process");
+const { execSync, spawnSync } = require("node:child_process");
 
 function getInput(name, fallback = "") {
   const key = `INPUT_${name.toUpperCase()}`;
@@ -239,6 +240,116 @@ function resolveBuildCommand(workingDir, defaultBuild) {
   return defaultBuild;
 }
 
+// ── Per-export size analysis (best-effort, requires esbuild) ──────────────────
+
+/**
+ * Returns the path to the esbuild binary if it can be found in any of the
+ * node_modules trees accessible from rootDir, otherwise returns null.
+ */
+function findEsbuild(rootDir) {
+  const candidates = [
+    path.join(rootDir, "node_modules", ".bin", "esbuild"),
+    path.join(process.cwd(), "node_modules", ".bin", "esbuild"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
+/**
+ * Parse named export identifiers from an ESM file.
+ * Handles:
+ *   export function foo / export async function foo / export class Foo
+ *   export const foo / export let foo / export var foo
+ *   export { foo, bar as baz } (re-exports and local groupings)
+ *
+ * Returns at most MAX_EXPORTS names to keep analysis fast.
+ */
+const MAX_EXPORTS = 40;
+
+function parseNamedExports(filePath) {
+  let content;
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return [];
+  }
+
+  const names = new Set();
+
+  // export function|class|const|let|var foo
+  for (const [, name] of content.matchAll(
+    /\bexport\s+(?:(?:async\s+)?function\s*\*?\s*|class\s+|(?:const|let|var)\s+)([a-zA-Z_$][a-zA-Z0-9_$]*)/g,
+  )) {
+    if (name !== "default") names.add(name);
+  }
+
+  // export { foo, bar as baz, ... }  (with or without 'from')
+  for (const [, group] of content.matchAll(/\bexport\s*\{([^}]+)\}/g)) {
+    for (const item of group.split(",")) {
+      // "foo as bar" → take "bar"; plain "foo" → take "foo"
+      const alias = item.trim().match(/(?:\bas\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)$/);
+      if (alias && alias[1] !== "default") names.add(alias[1]);
+    }
+  }
+
+  return [...names].slice(0, MAX_EXPORTS);
+}
+
+/**
+ * For each named export in `exportNames`, bundle only that export with esbuild
+ * (tree-shaking the rest away) and return the raw byte count.
+ *
+ * Returns null if esbuild fails or no exports are found.
+ */
+function measureExportSizes(esbuildBin, filePath, exportNames) {
+  if (!exportNames.length) return null;
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "boris-"));
+  const sizes = {};
+
+  try {
+    for (const name of exportNames) {
+      const entryFile = path.join(tmpDir, `entry_${name}.mjs`);
+      const outFile = path.join(tmpDir, `out_${name}.mjs`);
+
+      // Synthetic entry: import only this one export and re-export it so
+      // esbuild keeps it (otherwise tree-shaking would remove unused code).
+      fs.writeFileSync(
+        entryFile,
+        `export { ${name} } from ${JSON.stringify(path.resolve(filePath))};\n`,
+      );
+
+      const result = spawnSync(
+        esbuildBin,
+        [
+          entryFile,
+          "--bundle",
+          "--format=esm",
+          `--outfile=${outFile}`,
+          "--log-level=silent",
+          "--tree-shaking=true",
+        ],
+        { timeout: 30_000 },
+      );
+
+      if (result.status === 0 && fs.existsSync(outFile)) {
+        sizes[name] = fs.statSync(outFile).size;
+      }
+    }
+  } finally {
+    // Clean up temp dir
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+
+  return Object.keys(sizes).length > 0 ? sizes : null;
+}
+
 /** Measure raw, gzip, and brotli sizes for a single output file. */
 function measureFileSizes(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -254,6 +365,13 @@ function measureFileSizes(filePath) {
 }
 
 function collectSnapshot(rootDir) {
+  const esbuildBin = findEsbuild(rootDir);
+  if (esbuildBin) {
+    console.log(`Found esbuild at ${esbuildBin} — per-export analysis enabled.`);
+  } else {
+    console.log("esbuild not found in node_modules — per-export analysis skipped.");
+  }
+
   const packages = [];
   for (const entry of findPackages(rootDir)) {
     let exportsList = parseExports(entry.pkg.exports).filter(
@@ -272,8 +390,19 @@ function collectSnapshot(rootDir) {
         );
       }
 
+      // Per-export analysis: only for ESM-ish files and when esbuild is available
+      let exportSizes = null;
+      if (esbuildBin && fs.existsSync(filePath) && !exp.file.endsWith(".cjs")) {
+        try {
+          const names = parseNamedExports(filePath);
+          exportSizes = measureExportSizes(esbuildBin, filePath, names);
+        } catch (err) {
+          console.warn(`::warning::Export analysis failed for ${exp.file}: ${err.message}`);
+        }
+      }
+
       if (!exportGroups.has(exp.exportPath)) exportGroups.set(exp.exportPath, []);
-      exportGroups.get(exp.exportPath).push({ file: exp.file, ...sizes });
+      exportGroups.get(exp.exportPath).push({ file: exp.file, ...sizes, exportSizes });
     }
 
     packages.push({
@@ -304,15 +433,19 @@ function flattenByPackage(snapshot, isMain) {
           gzipPrSize: 0,
           brotliMainSize: 0,
           brotliPrSize: 0,
+          mainExportSizes: null,
+          prExportSizes: null,
         };
         if (isMain) {
           existing.mainSize = file.rawSize;
           existing.gzipMainSize = file.gzipSize;
           existing.brotliMainSize = file.brotliSize;
+          existing.mainExportSizes = file.exportSizes ?? null;
         } else {
           existing.prSize = file.rawSize;
           existing.gzipPrSize = file.gzipSize;
           existing.brotliPrSize = file.brotliSize;
+          existing.prExportSizes = file.exportSizes ?? null;
         }
         map.set(key, existing);
       }
@@ -332,6 +465,7 @@ function mergeSnapshots(mainSnapshot, prSnapshot) {
       existing.prSize = value.prSize;
       existing.gzipPrSize = value.gzipPrSize;
       existing.brotliPrSize = value.brotliPrSize;
+      existing.prExportSizes = value.prExportSizes;
     } else {
       merged.set(key, value);
     }
@@ -357,6 +491,8 @@ function mergeSnapshots(mainSnapshot, prSnapshot) {
       gzipPrSize: value.gzipPrSize,
       brotliMainSize: value.brotliMainSize,
       brotliPrSize: value.brotliPrSize,
+      ...(value.mainExportSizes != null ? { mainExportSizes: value.mainExportSizes } : {}),
+      ...(value.prExportSizes != null ? { prExportSizes: value.prExportSizes } : {}),
     });
   }
 

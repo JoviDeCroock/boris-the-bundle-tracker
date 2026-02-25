@@ -51,6 +51,12 @@ interface ReportPayload {
         brotliMainSize?: number;
         /** Brotli size in bytes on the PR branch. */
         brotliPrSize?: number;
+        /**
+         * Per-named-export sizes measured by tree-shaking each export individually.
+         * Only present when esbuild was available in the project's node_modules.
+         */
+        mainExportSizes?: Record<string, number> | null;
+        prExportSizes?: Record<string, number> | null;
       }>;
     }>;
   }>;
@@ -204,6 +210,14 @@ report.post("/", async (c) => {
           )
           .get();
 
+        const exportSizesJson =
+          fileEntry.mainExportSizes != null || fileEntry.prExportSizes != null
+            ? JSON.stringify({
+                main: fileEntry.mainExportSizes ?? null,
+                pr: fileEntry.prExportSizes ?? null,
+              })
+            : null;
+
         if (existing) {
           await db
             .update(schema.packageEvolution)
@@ -217,6 +231,7 @@ report.post("/", async (c) => {
               gzipPrSize: fileEntry.gzipPrSize ?? null,
               brotliMainSize: fileEntry.brotliMainSize ?? null,
               brotliPrSize: fileEntry.brotliPrSize ?? null,
+              exportSizes: exportSizesJson,
               reportedAt: now,
             })
             .where(eq(schema.packageEvolution.id, existing.id));
@@ -238,6 +253,7 @@ report.post("/", async (c) => {
             gzipPrSize: fileEntry.gzipPrSize ?? null,
             brotliMainSize: fileEntry.brotliMainSize ?? null,
             brotliPrSize: fileEntry.brotliPrSize ?? null,
+            exportSizes: exportSizesJson,
             reportedAt: now,
           });
         }
