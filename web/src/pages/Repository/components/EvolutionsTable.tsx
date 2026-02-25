@@ -215,8 +215,8 @@ export function EvolutionsTable({
         </div>
       </div>
 
-      <div class="overflow-x-auto -mx-5 px-5">
-        <table class="w-full text-sm min-w-[560px]">
+      <div class="-mx-5 px-5 overflow-visible">
+        <table class="w-full text-sm">
           <thead>
             <tr class="text-left border-b border-neutral-800/60">
               <th class="pb-2 pr-4 font-mono text-[10px] uppercase tracking-widest text-neutral-600 font-normal">
@@ -258,7 +258,8 @@ export function EvolutionsTable({
                     class="cursor-pointer select-none hover:text-neutral-400 transition-colors"
                     onClick={() => toggleSort("delta")}
                   >
-                    Change<SortIndicator field="delta" />
+                    Change
+                    <SortIndicator field="delta" />
                   </span>
                 </div>
               </th>
@@ -317,7 +318,8 @@ export function EvolutionsTable({
                                 type="button"
                                 class="cursor-pointer select-none rounded px-2 py-0.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/70 font-mono text-xs"
                                 onClick={() => {
-                                  openMenuPr.value = openMenuPr.value === prNumber ? null : prNumber;
+                                  openMenuPr.value =
+                                    openMenuPr.value === prNumber ? null : prNumber;
                                 }}
                                 aria-label={`Open actions for PR #${prNumber}`}
                               >
@@ -332,7 +334,8 @@ export function EvolutionsTable({
                                       class="w-full px-2 py-1 text-left font-mono text-[11px] text-emerald-300 hover:bg-emerald-500/10"
                                       onClick={() => handleMarkMerged(prNumber)}
                                       disabled={
-                                        updatingPr.value === prNumber || deletingPr.value === prNumber
+                                        updatingPr.value === prNumber ||
+                                        deletingPr.value === prNumber
                                       }
                                     >
                                       {updatingPr.value === prNumber
@@ -360,7 +363,9 @@ export function EvolutionsTable({
                         </td>
                       </>
                     )}
-                    <td class="py-2.5 pr-4 font-mono text-xs text-neutral-500">{evolution.fileName}</td>
+                    <td class="py-2.5 pr-4 font-mono text-xs text-neutral-500">
+                      {evolution.fileName}
+                    </td>
                     <td class="py-2.5 pr-4 align-top">
                       <SizeCell
                         raw={evolution.mainSize}
