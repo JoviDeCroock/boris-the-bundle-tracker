@@ -74,7 +74,7 @@ export function Dashboard() {
 
   return (
     <div class="min-h-screen bg-neutral-950 pt-14">
-      <div class="max-w-3xl mx-auto px-6 py-10">
+      <div class="max-w-7xl mx-auto px-6 py-10">
         {/* Page header */}
         <div class="mb-8">
           <p class="font-mono text-xs text-orange-500 tracking-widest uppercase mb-2">Dashboard</p>
