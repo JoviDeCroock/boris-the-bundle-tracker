@@ -140,8 +140,7 @@ report.post("/", async (c) => {
     return c.json({ error: "API key does not belong to this repository" }, 403);
   }
 
-  // ── Update key last-used timestamp ────────────────────────────────────────
-  await db
+  const updateKeyLastUsedPromise = db
     .update(schema.apiKey)
     .set({ lastUsedAt: new Date() })
     .where(eq(schema.apiKey.id, keyRecord.id));
@@ -246,6 +245,8 @@ report.post("/", async (c) => {
     }
   }
 
+  await updateKeyLastUsedPromise;
+
   return c.json({ success: true, recordsCreated: upsertedCount });
 });
 
@@ -319,17 +320,17 @@ report.patch("/", async (c) => {
     return c.json({ error: "API key does not belong to this repository" }, 403);
   }
 
-  // ── Update key last-used timestamp ────────────────────────────────────────
-  await db
-    .update(schema.apiKey)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(schema.apiKey.id, keyRecord.id));
-
-  // ── Update all evolution records for this PR ──────────────────────────────
-  const repoPackages = await db
-    .select({ id: schema.package_.id })
-    .from(schema.package_)
-    .where(eq(schema.package_.repositoryId, repo.id));
+  const [_, repoPackages] = await Promise.all([
+    db
+      .update(schema.apiKey)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(schema.apiKey.id, keyRecord.id)),
+    // ── Update all evolution records for this PR ────────────────────────────
+    db
+      .select({ id: schema.package_.id })
+      .from(schema.package_)
+      .where(eq(schema.package_.repositoryId, repo.id)),
+  ]);
 
   if (repoPackages.length === 0) {
     return c.json({ success: true, recordsUpdated: 0 });
