@@ -18,9 +18,6 @@ export function Footer() {
           <a href="#how-it-works" class="hover:text-neutral-300 transition-colors">
             How it works
           </a>
-          <a href="#pricing" class="hover:text-neutral-300 transition-colors">
-            Pricing
-          </a>
           <a
             href="https://github.com/JoviDeCroock/boris-the-bundle-tracker"
             class="hover:text-neutral-300 transition-colors"
