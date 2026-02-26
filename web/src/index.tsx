@@ -24,6 +24,9 @@ const Billing = lazy(() => import("./pages/Billing/index").then((module) => modu
 const RepositoryPage = lazy(() =>
   import("./pages/Repository/index").then((module) => module.RepositoryPage),
 );
+const PersonaPage = lazy(() =>
+  import("./pages/Persona/index").then((module) => module.PersonaPage),
+);
 const NotFound = lazy(() => import("./pages/_404").then((module) => module.NotFound));
 
 function AppContent() {
@@ -41,6 +44,7 @@ function AppContent() {
           <Route path="/auth" component={Auth} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/billing" component={Billing} />
+          <Route path="/persona/:id" component={PersonaPage} />
           <Route path="/repository/:id" component={RepositoryPage} />
           <Route default component={NotFound} />
         </Router>

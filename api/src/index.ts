@@ -7,6 +7,7 @@ import { subscription } from "./routes/subscription";
 import { repositories } from "./routes/repositories";
 import { apiKeys } from "./routes/api-keys";
 import { packages } from "./routes/packages";
+import { personas } from "./routes/personas";
 import { report } from "./routes/report";
 import { badge } from "./routes/badge";
 import { Bindings, Variables } from "./types";
@@ -141,6 +142,9 @@ app.get("/api/v1/me", (c) => {
 
 // Subscription
 app.route("/api/v1/subscription", subscription);
+
+// Personas (session-protected via middleware above)
+app.route("/api/v1/personas", personas);
 
 // Repositories & related resources (session-protected via middleware above)
 app.route("/api/v1/repositories", repositories);

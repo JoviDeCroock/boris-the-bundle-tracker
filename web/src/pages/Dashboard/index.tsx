@@ -2,40 +2,38 @@ import { useEffect } from "preact/hooks";
 import { useLocation } from "preact-iso";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthModel } from "../../models/auth";
-import { addRepository, listRepositories, removeRepository } from "../../lib/api";
+import { createPersona, deletePersona, listPersonas } from "../../lib/api";
 import { useModel, useSignal } from "@preact/signals";
-import { AddRepositoryCard } from "./components/AddRepositoryCard";
-import { RepositoriesPanel } from "./components/RepositoriesPanel";
-import { parseRepoInput } from "./components/dashboardUtils";
+import { PersonasPanel } from "./components/PersonasPanel";
+import { CreatePersonaModal } from "./components/CreatePersonaModal";
+import { Button } from "../../components/ui/Button";
 
 export function Dashboard() {
   const { route } = useLocation();
   const auth = useModel(AuthModel);
   const queryClient = useQueryClient();
 
-  const reposQuery = useQuery({
-    queryKey: ["repositories"],
-    queryFn: listRepositories,
+  const personasQuery = useQuery({
+    queryKey: ["personas"],
+    queryFn: listPersonas,
     enabled: auth.authenticated.value,
   });
 
-  const addRepoMutation = useMutation({
-    mutationFn: ({ owner, name }: { owner: string; name: string }) => addRepository(owner, name),
+  const createPersonaMutation = useMutation({
+    mutationFn: createPersona,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+      queryClient.invalidateQueries({ queryKey: ["personas"] });
     },
   });
 
-  const removeRepoMutation = useMutation({
-    mutationFn: (id: string) => removeRepository(id),
+  const deletePersonaMutation = useMutation({
+    mutationFn: (id: string) => deletePersona(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+      queryClient.invalidateQueries({ queryKey: ["personas"] });
     },
   });
 
-  const addInput = useSignal("");
-  const addError = useSignal<string | null>(null);
-  const addLoading = useSignal(false);
+  const showCreateModal = useSignal(false);
 
   useEffect(() => {
     auth.checkSession().then(() => {
@@ -53,59 +51,53 @@ export function Dashboard() {
     );
   }
 
-  async function handleAddRepo(e: Event) {
-    e.preventDefault();
-    addError.value = null;
-    const parsed = parseRepoInput(addInput.value);
-    if (!parsed) {
-      addError.value = 'Enter a repository as "owner/name", e.g. "acme/my-app"';
-      return;
-    }
-    addLoading.value = true;
-    try {
-      await addRepoMutation.mutateAsync(parsed);
-      addInput.value = "";
-    } catch (err) {
-      addError.value = err instanceof Error ? err.message : "Failed to add repository";
-    } finally {
-      addLoading.value = false;
-    }
-  }
-
   return (
     <div class="min-h-screen bg-neutral-950 pt-14">
       <div class="max-w-7xl mx-auto px-6 py-10">
         {/* Page header */}
-        <div class="mb-8">
-          <p class="font-mono text-xs text-orange-500 tracking-widest uppercase mb-2">Dashboard</p>
-          <h1 class="text-2xl font-bold text-white">Repositories</h1>
-          <p class="text-sm text-neutral-400 mt-1">
-            Track bundle-size evolution across your GitHub repositories.
-          </p>
+        <div class="mb-8 flex items-end justify-between gap-4">
+          <div>
+            <p class="font-mono text-xs text-orange-500 tracking-widest uppercase mb-2">
+              Dashboard
+            </p>
+            <h1 class="text-2xl font-bold text-white">Personas</h1>
+            <p class="text-sm text-neutral-400 mt-1">
+              Manage your bundle-tracking personas and their linked repositories.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => (showCreateModal.value = true)}
+          >
+            + New persona
+          </Button>
         </div>
 
-        <AddRepositoryCard
-          inputValue={addInput.value}
-          loading={addLoading.value}
-          error={addError.value}
-          onSubmit={handleAddRepo}
-          onInput={(value) => (addInput.value = value)}
-        />
-
-        <RepositoriesPanel
-          repositories={reposQuery.data ?? []}
-          loading={reposQuery.isLoading}
+        <PersonasPanel
+          personas={personasQuery.data ?? []}
+          loading={personasQuery.isLoading}
           error={
-            reposQuery.error instanceof Error ? reposQuery.error.message : reposQuery.error ? "Failed to load repositories" : null
+            personasQuery.error instanceof Error
+              ? personasQuery.error.message
+              : personasQuery.error
+                ? "Failed to load personas"
+                : null
           }
-          onOpen={(repositoryId) => route(`/repository/${repositoryId}`)}
-          onRemove={async (repo) => {
-            if (confirm(`Remove ${repo.owner}/${repo.name}?`)) {
-              await removeRepoMutation.mutateAsync(repo.id);
+          onOpen={(personaId) => route(`/persona/${personaId}`)}
+          onRemove={async (persona) => {
+            if (confirm(`Delete persona "${persona.name}"?`)) {
+              await deletePersonaMutation.mutateAsync(persona.id);
             }
           }}
         />
       </div>
+
+      <CreatePersonaModal
+        open={showCreateModal.value}
+        onClose={() => (showCreateModal.value = false)}
+        onCreate={createPersonaMutation.mutateAsync}
+        onViewPersona={(id) => route(`/persona/${id}`)}
+      />
     </div>
   );
 }

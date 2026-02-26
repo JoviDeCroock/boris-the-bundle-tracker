@@ -20,6 +20,45 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return response.json() as Promise<T>;
 }
 
+// ── Personas ──────────────────────────────────────────────────────────────────
+
+export interface Persona {
+  id: string;
+  name: string;
+  description: string | null;
+  repositoryId: string | null;
+  repository: { owner: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listPersonas(): Promise<Persona[]> {
+  const res = await fetchApi<{ personas: Persona[] }>("/api/v1/personas");
+  return res.personas;
+}
+
+export async function createPersona(data: {
+  name: string;
+  description?: string;
+  repoOwner?: string;
+  repoName?: string;
+}): Promise<Persona> {
+  const res = await fetchApi<{ persona: Persona }>("/api/v1/personas", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.persona;
+}
+
+export async function getPersona(id: string): Promise<Persona> {
+  const res = await fetchApi<{ persona: Persona }>(`/api/v1/personas/${id}`);
+  return res.persona;
+}
+
+export async function deletePersona(id: string): Promise<void> {
+  await fetchApi(`/api/v1/personas/${id}`, { method: "DELETE" });
+}
+
 // ── Subscription ──────────────────────────────────────────────────────────────
 
 export interface SubscriptionResponse {

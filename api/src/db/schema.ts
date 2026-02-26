@@ -163,6 +163,31 @@ export const packageEvolution = sqliteTable(
   ],
 );
 
+// ── Personas ──────────────────────────────────────────────────
+
+/**
+ * A named persona belonging to a user.
+ * Personas are the primary organisational unit – users create one or more
+ * personas and optionally link each one to a GitHub repository.
+ */
+export const persona = sqliteTable(
+  "persona",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    repositoryId: text("repository_id").references(() => repository.id, {
+      onDelete: "set null",
+    }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => [index("persona_user_idx").on(t.userId)],
+);
+
 // ── Subscriptions ─────────────────────────────────────────────
 
 export const subscription = sqliteTable(
