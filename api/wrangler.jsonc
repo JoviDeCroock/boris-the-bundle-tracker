@@ -22,6 +22,7 @@
   "vars": {
     "BETTER_AUTH_URL": "https://boris-api.resynapse.dev",
     "LOCAL": "false",
+    "ADMIN_EMAILS": "",
   },
   "d1_databases": [
     {

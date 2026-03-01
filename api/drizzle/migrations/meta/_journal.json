@@ -22,6 +22,20 @@
       "when": 1771918584885,
       "tag": "0002_pr_merge_status",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1772000000000,
+      "tag": "0003_compressed_sizes",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1772100000000,
+      "tag": "0004_feature_flags",
+      "breakpoints": true
     }
   ]
 }
