@@ -366,14 +366,14 @@ export function EvolutionsTable({
                     <td class="py-2.5 pr-4 font-mono text-xs text-neutral-500">
                       {evolution.fileName}
                     </td>
-                    <td class="py-2.5 pr-4 align-top">
+                    <td class="py-2.5 pr-4 align-top text-right">
                       <SizeCell
                         raw={evolution.mainSize}
                         gzip={evolution.gzipMainSize}
                         brotli={evolution.brotliMainSize}
                       />
                     </td>
-                    <td class="py-2.5 pr-4 align-top">
+                    <td class="py-2.5 pr-4 align-top text-right">
                       <SizeCell
                         raw={evolution.prSize}
                         gzip={evolution.gzipPrSize}
