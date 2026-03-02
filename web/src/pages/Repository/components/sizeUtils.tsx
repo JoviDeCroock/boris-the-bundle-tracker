@@ -35,7 +35,7 @@ type SizeCellProps = {
 
 export function SizeCell({ raw, gzip, brotli }: SizeCellProps) {
   return (
-    <div class="font-mono text-xs space-y-0.5">
+    <div class="font-mono text-xs space-y-0.5 text-right tabular-nums">
       <div class="text-neutral-300">{formatBytes(raw)}</div>
       {gzip != null && (
         <div class="text-neutral-500">
