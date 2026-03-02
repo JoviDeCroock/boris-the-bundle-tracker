@@ -1,5 +1,5 @@
 import actionDefinitionFile from "../../../../action/action.yml?raw";
-import actionRuntimeFile from "../../../../action/index.js?raw";
+import actionRuntimeFile from "../../../../action/index.cjs?raw";
 
 export const ACTION_INSTALL_FILES = [
   {
