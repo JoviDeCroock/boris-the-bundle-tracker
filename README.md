@@ -10,25 +10,6 @@ A full-stack SaaS starter kit with authentication, billing, and a dashboard — 
 | Backend  | Hono (Cloudflare Workers)            |
 | Database | Drizzle ORM + Cloudflare D1 (SQLite) |
 | Auth     | BetterAuth (email/password)          |
-| Billing  | Polar (free/pro plans, webhooks)     |
-
-## Project Structure
-
-```
-├── web/          Preact frontend (Vite)
-│   └── src/
-│       ├── components/   UI components
-│       ├── pages/        Route pages (Home, Auth, Dashboard, Billing)
-│       ├── models/       Signal-based models (auth, billing, subscription)
-│       └── lib/          Auth client, API client, constants
-├── api/          Hono backend (Cloudflare Workers)
-│   └── src/
-│       ├── db/           Drizzle schema
-│       ├── lib/          Auth setup, plan logic
-│       ├── routes/       API routes
-│       └── utils/        Helpers
-└── package.json  Root scripts (lint, format)
-```
 
 ## Quick Start
 
