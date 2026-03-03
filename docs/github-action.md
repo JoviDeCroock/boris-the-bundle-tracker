@@ -75,8 +75,6 @@ jobs:
         uses: JoviDeCroock/boris-the-bundle-tracker/action@main
         with:
           api-key: ${{ secrets.BORIS_API_KEY }}
-          # Boris API endpoint (default shown below)
-          # api-url: https://api.example.com
           # Base branch to compare against (default: main)
           # base-branch: main
 ```
@@ -90,7 +88,6 @@ That's it. On the next pull request, Boris will record the bundle-size diff.
 | Input               | Required | Default                   | Description                     |
 | ------------------- | -------- | ------------------------- | ------------------------------- |
 | `api-key`           | yes      | —                         | Boris API key (`bbt_…`)         |
-| `api-url`           | no       | `https://api.example.com` | Boris API base URL              |
 | `base-branch`       | no       | `main`                    | Branch to compare against       |
 | `working-directory` | no       | `.`                       | Root of the npm workspace       |
 | `build-command`     | no       | `npm run build`           | Command to build the packages   |
