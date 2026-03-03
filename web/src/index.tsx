@@ -20,7 +20,6 @@ import { render } from "preact";
 const Home = lazy(() => import("./pages/Home/index").then((module) => module.Home));
 const Auth = lazy(() => import("./pages/Auth/index").then((module) => module.Auth));
 const Dashboard = lazy(() => import("./pages/Dashboard/index").then((module) => module.Dashboard));
-const Billing = lazy(() => import("./pages/Billing/index").then((module) => module.Billing));
 const RepositoryPage = lazy(() =>
   import("./pages/Repository/index").then((module) => module.RepositoryPage),
 );
@@ -40,7 +39,6 @@ function AppContent() {
           <Route path="/" component={Home} />
           <Route path="/auth" component={Auth} />
           <Route path="/dashboard" component={Dashboard} />
-          <Route path="/billing" component={Billing} />
           <Route path="/repository/:id" component={RepositoryPage} />
           <Route default component={NotFound} />
         </Router>
