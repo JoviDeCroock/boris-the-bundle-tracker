@@ -31,14 +31,6 @@ export function DashboardHeader() {
           >
             Dashboard
           </a>
-          {false && (
-            <a
-              href="/billing"
-              class="text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-md hover:bg-neutral-800/60"
-            >
-              Billing
-            </a>
-          )}
           <button
             onClick={handleSignOut}
             class="text-sm text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-md hover:bg-neutral-800/60 ml-1"

@@ -48,14 +48,12 @@ export function createAuth(env: Env) {
                 slug: "pro",
               },
             ],
-            // This success URL is more to support local-dev so we don't have to only use
-            // webhooks. All though local webhooks are now possible with https://polar.sh/docs/integrate/webhooks/locally
             successUrl: isProduction(env)
-              ? "https://boris-api.resynapse.dev/api/billing-success?checkout_id={CHECKOUT_ID}"
-              : "http://localhost:8787/api/billing-success?checkout_id={CHECKOUT_ID}",
+              ? "https://boris.resynapse.dev/dashboard"
+              : "http://localhost:5173/dashboard",
             returnUrl: isProduction(env)
-              ? "https://boris.resynapse.dev/billing"
-              : "http://localhost:5173/billing",
+              ? "https://boris.resynapse.dev/dashboard"
+              : "http://localhost:5173/dashboard",
           }),
           portal(),
           webhooks({
