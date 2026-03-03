@@ -1,6 +1,4 @@
-# Product Template
-
-A full-stack SaaS starter kit with authentication, billing, and a dashboard — ready to build on.
+# Boris the bundle tracker
 
 ## Tech Stack
 
